@@ -14,7 +14,7 @@ import copy
 import json
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 try:  # .env support is optional
     from dotenv import load_dotenv
@@ -70,12 +70,12 @@ def complete_json(prompt: str, schema: dict, fixture: Optional[dict] = None) -> 
     raise LLMUnavailable(f"Model returned invalid JSON twice: {last_error}")
 
 
-_JSON_TYPES = {"string": str, "integer": int, "boolean": bool, "array": list, "object": dict, "number": (int, float)}
+_JSON_TYPES: dict[str, Any] = {"string": str, "integer": int, "boolean": bool, "array": list, "object": dict, "number": (int, float)}
 
 
 def check_types(data, schema: dict, path: str = "$") -> None:
     """Validate types and enums of model output against the schema (raises ValueError)."""
-    expected = schema.get("type")
+    expected = str(schema.get("type"))
     py = _JSON_TYPES.get(expected)
     if py is not None:
         bad_bool = expected in ("integer", "number") and isinstance(data, bool)

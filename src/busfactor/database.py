@@ -107,7 +107,7 @@ def _connect():
 
 
 def _project_of(record: BaseModel) -> str:
-    pid = record.id if isinstance(record, Project) else getattr(record, "project_id", None)
+    pid = getattr(record, "id", None) if isinstance(record, Project) else getattr(record, "project_id", None)
     if not pid:
         raise ValueError(f"{type(record).__name__} {getattr(record, 'id', '')} has no project_id; refusing to store "
                          "a record that does not belong to a project.")
@@ -116,12 +116,13 @@ def _project_of(record: BaseModel) -> str:
 
 def _upsert(con: sqlite3.Connection, record: BaseModel) -> str:
     table = TABLES[type(record)]
+    record_id: str = getattr(record, "id")  # noqa: B009  (every stored model has an id)
     member = getattr(record, "member_id", None) or getattr(record, "learner_id", None)
     con.execute(f"INSERT OR REPLACE INTO {table} (id, member_id, decision_id, data, project_id) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (record.id, member, getattr(record, "decision_id", None), record.model_dump_json(),
+                (record_id, member, getattr(record, "decision_id", None), record.model_dump_json(),
                  _project_of(record)))
-    return record.id
+    return record_id
 
 
 def save_record(record: BaseModel) -> str:
@@ -260,6 +261,7 @@ def _delete_project(con: sqlite3.Connection, project_id: str) -> None:
     con.execute("DELETE FROM settings WHERE key IN (SELECT 'cred:member:' || id FROM members WHERE project_id = ?)",
                 (project_id,))
     con.execute("DELETE FROM settings WHERE key = ?", (f"cred:reviewer:{project_id}",))
+    con.execute("DELETE FROM settings WHERE key = ?", (f"course:{project_id}",))
     for table in [*TABLES.values(), "log_events"]:
         con.execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
 
@@ -272,7 +274,7 @@ def delete_project(project_id: str) -> None:
 
 def seed_demo() -> None:
     """Reset ONLY the demo project to the SYNTHETIC data in data/demo/*.json; other projects are untouched."""
-    sources = [("project.json", "project", Project), ("members.json", "members", Member),
+    sources: list[tuple[str, str, type[BaseModel]]] = [("project.json", "project", Project), ("members.json", "members", Member),
                ("decisions.json", "decisions", DecisionCard), ("questions.json", "questions", InterviewQuestion),
                ("evidence.json", "evidence", AssessmentEvidence)]
     records = []

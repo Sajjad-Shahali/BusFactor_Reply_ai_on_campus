@@ -63,7 +63,7 @@ def test_every_italian_entry_keeps_its_placeholders():
 def test_coverage_page_offers_counts_only_downloads():
     at = open_app()
     goto(at, "3. Team Coverage")
-    assert len(at.get("download_button")) == 2                  # Markdown report and CSV
+    assert len(at.get("download_button")) == 3                  # PDF, Markdown and CSV
     report = orc.export_team_report()
     assert "Member A" not in report and "M02" not in report
 

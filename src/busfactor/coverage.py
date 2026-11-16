@@ -7,6 +7,8 @@ Deterministic, no LLM. Evidence is the single source of truth:
 """
 from __future__ import annotations
 
+from typing import Literal
+
 from busfactor.models import (
     AssessmentEvidence, CoverageReport, DecisionCard, DecisionCoverage, EvidenceStatus, Importance, ReviewStatus,
 )
@@ -24,6 +26,7 @@ def latest_by_member(evidence: list[AssessmentEvidence], decision_id: str) -> di
 def decision_status(decision: DecisionCard, evidence: list[AssessmentEvidence]) -> DecisionCoverage:
     latest = latest_by_member(evidence, decision.id) if decision.review_status == ReviewStatus.verified else {}
     demonstrated = sorted(m for m, e in latest.items() if e.rubric_score == 2)
+    status: Literal["covered", "single_point_of_failure", "no_explainer", "not_assessed"]
     if not latest:
         status = "not_assessed"
     elif len(demonstrated) >= 2:

@@ -15,6 +15,7 @@ Guards enforced in CODE:
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from collections import Counter
 from pathlib import Path
@@ -41,15 +42,33 @@ GRADE_SCHEMA = {
 }
 
 _ANSWER_REQUEST = [
-    r"\bgive me (the|an|your) (answer|solution|correct answer)",
+    # English: ask for / reveal / write the answer
+    r"\b(give|tell|show|reveal|provide|write|spell out|dictate) (me|us) (the|an|a|your|that|this)? ?"
+    r"(correct |right |perfect |ideal |model |expected |full |final |exact |complete |real )?"
+    r"(answer|solution|response|key)\b",
+    r"\b(reveal|provide|spell out|dictate) (the|an|a|your|that|this)? ?"
+    r"(correct |right |perfect |ideal |model |expected |full |final |exact |complete |real )?"
+    r"(answer|solution|response|key)\b",
+    r"\b(need|want|require) (the |an? )?(correct |right |model )?(answer|solution)( key)?\b",
     r"\b(tell|show) me (the|what the) (answer|solution|right answer|correct answer)",
-    r"\bwhat('?s| is) the (right |correct )?(answer|solution)\b",
+    r"\bwhat('?s| is| would be)? (the )?(right |correct |expected |model |ideal |perfect |real )?(answer|solution)\b",
+    r"\bwhat would the (perfect |ideal |model |correct |right )?(answer|solution) (look|be)\b",
     r"\bjust (tell|give|show) me\b",
-    r"\b(answer|solve) (it|this|the question) for me\b",
-    r"\bwhat should i (write|answer|say)\b",
-    r"\b(dammi|dimmi) la (risposta|soluzione)\b",
+    r"\b(answer|solve|write|do|complete|finish)\b[^.\n]{0,25}\bfor me\b",
+    r"\bwhat (should|shall|do|can) i (write|answer|say|put|type|enter)\b",
+    r"\btell me what to (answer|write|say|put|type)\b",
+    # Italian
+    r"\b(dammi|dimmi|dai|dare|dici|scrivi|mostrami|rivela|fornisci|fornire)\b[^.\n]{0,25}\b(risposta|soluzione)\b",
     r"\bqual ?(e|è|'è) la (risposta|soluzione)\b",
+    r"\bcosa devo (rispondere|scrivere|dire)\b",
+    # French / Spanish / German
+    r"\b(donne|dis|montre|ecris)[- ]?(moi)?\b[^.\n]{0,15}\b(reponse|solution)\b",
+    r"\b(dame|dime|muestrame|escribe)\b[^.\n]{0,15}\b(respuesta|solucion)\b",
+    r"\b(gib|sag|zeig|schreib)\w*\b[^.\n]{0,15}\b(antwort|losung|loesung)\b",
 ]
+_SCORE_TARGET = (r"(2\s*/\s*2|2 out of 2|two out of two|score (of )?2|full marks?|full score|full points|top marks?|"
+                 r"top score|max(imum)? (score|points?|marks?)|maximum|highest (score|mark|grade|rating)|"
+                 r"perfect (score|mark)|2 points?|two points?|grade (of )?2)")
 _INJECTION = [
     r"\b(ignore|disregard|forget|override|bypass)\b[^.\n]{0,40}\b(instructions?|rules?|rubric|prompt|criteria|grader)\b",
     r"\byou are (now )?(a|an|the|my) (grader|assistant|ai|system|model)\b",
@@ -61,7 +80,84 @@ _INJECTION = [
     r"<<<|>>>|</?\s*(system|instructions?)\s*>",
     r"\b(ignora|dimentica)\b[^.\n]{0,30}\b(istruzioni|regole|rubrica)\b",
     r"\bdammi\b[^.\n]{0,20}\b(punteggio|voto)\b[^.\n]{0,15}\b(2|due|massimo|pieno)\b",
+    # English paraphrases: ask for a mark, change the grader's role or rules
+    r"\b(give|award|assign|set|record|return|output|rate|mark|grade|score|respond with|reply with|write)\b"
+    r"[^.\n]{0,40}\b" + _SCORE_TARGET + r"\b",
+    r"\b(output|return|respond with|reply with|answer with)\b[^.\n]{0,15}\b(2|two)\b",
+    r"\b(you are|act as|pretend (to be|you are)|from now on)\b[^.\n]{0,25}"
+    r"\b(grader|assistant|evaluator|judge|examiner|system|ai|model)\b",
+    r"\b(new|updated|additional) instructions? (for|to) (the )?(assistant|grader|model|ai|evaluator)\b",
+    r"\boverride (the )?(evaluation|grading|scoring|marking|rubric|rules|instructions)\b",
+    r"\b(stop|do not|don't|never)\b[^.\n]{0,15}\b(following|follow|evaluating|evaluate|grading|grade|scoring|score|"
+    r"checking|check)\b[^.\n]{0,30}\b(rubric|guide|guidelines|rules|criteria|this|instructions)\b",
+    r"\b(pretend|assume|suppose|act as if)\b[^.\n]{0,30}\b(rubric|criteria|requirements?)\b[^.\n]{0,30}"
+    r"\b(satisfied|met|fulfilled|passed)\b",
+    r"\b(treat|consider|regard|mark|count) (this|it|the answer|my answer)\b[^.\n]{0,25}"
+    r"\b(perfect|fully correct|excellent|full marks?)\b",
+    r"\b(teacher|professor|instructor|lecturer|ta)\b[^.\n]{0,25}\b(said|told|confirmed|approved|wants)\b[^.\n]{0,40}"
+    r"\b(full marks?|perfect|deserves|2 out of 2|top mark)\b",
+    # Italian
+    r"\b(assegna|dai|da'?|dammi|metti|attribuisci)\b[^.\n]{0,25}\b(punteggio|voto|punti)\b[^.\n]{0,15}"
+    r"\b(2|due|massimo|pieno|pieni)\b",
+    r"\b(assegna|dai|da'?|dammi|attribuisci)\b[^.\n]{0,25}\b(il )?(massimo|massimi|pieni)\b",
+    r"\bsei (ora |adesso )?(il|un|l'?) ?(valutatore|correttore|assistente|sistema)\b",
+    # Spanish / German / French
+    r"\b(ignora|olvida)\b[^.\n]{0,30}\b(instrucciones|reglas|rubrica)\b",
+    r"\b(da|dame|pon|asigna)\b[^.\n]{0,25}\b(puntuacion|nota|puntos?)\b[^.\n]{0,15}\b(maxima|maximo|2|dos|completa)\b",
+    r"\b(ignorier\w*|vergiss)\b[^.\n]{0,30}\b(anweisungen|regeln|rubrik)\b",
+    r"\b(gib|vergib)\b[^.\n]{0,25}\b(punktzahl|note|punkte)\b",
+    r"\b(ignore|oublie)\b[^.\n]{0,30}\b(instructions|regles|consignes)\b",
+    r"\b(donne|attribue)\b[^.\n]{0,25}\b(note|score|points?)\b[^.\n]{0,15}\b(maximale?|maximum|2|deux|pleine)\b",
 ]
+
+# letters that look like Latin ones in Cyrillic/Greek, used to dodge pattern matching
+_CONFUSABLES = str.maketrans({"а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x", "і": "i",
+                              "ј": "j", "ѕ": "s", "ο": "o", "α": "a", "ν": "v", "ι": "i", "κ": "k"})
+_INVISIBLE = dict.fromkeys(map(ord, "​‌‍‎‏⁠﻿­"))
+_SPACED_LETTERS = re.compile(r"\b[a-z](?:[ \-.][a-z]){2,}\b")
+
+
+def _join_single_letters(segment: str) -> str:
+    """'r u b r i c and give 2' -> 'rubric and give 2': runs of single letters become one word."""
+    out, run = [], ""
+    for token in segment.split():
+        if len(token) == 1 and token.isalpha():
+            run += token
+            continue
+        if run:
+            out.append(run)
+            run = ""
+        out.append(token)
+    return " ".join(out + ([run] if run else []))
+
+
+def normalise_for_guards(text: str) -> str:
+    """Undo cheap tricks before pattern matching: invisible characters, look-alike letters, accents, odd
+    spacing and letter-by-letter spelling ("g i v e", "a-n-s-w-e-r")."""
+    t = unicodedata.normalize("NFKD", text or "").translate(_INVISIBLE)
+    t = "".join(ch for ch in t if not unicodedata.combining(ch))
+    t = t.replace("’", "'").replace("`", "'").casefold().translate(_CONFUSABLES)
+    tokens = t.split()
+    if len(tokens) >= 6 and sum(len(x) == 1 for x in tokens) / len(tokens) >= 0.7:
+        # mostly single letters: a spelled-out sentence where a double space marks the word breaks
+        t = " ".join(_join_single_letters(segment) for segment in re.split(r"\s{2,}", t))
+    t = _SPACED_LETTERS.sub(lambda m: re.sub(r"[ \-.]", "", m.group(0)), t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def is_answer_request(text: str) -> bool:
+    t = normalise_for_guards(text)
+    return any(re.search(p, t) for p in _ANSWER_REQUEST)
+
+
+def detect_injection(text: str) -> bool:
+    """True if the text tries to instruct the grader (prompt injection), in several languages."""
+    raw, t = text or "", normalise_for_guards(text)
+    # the line-anchored role pattern and the delimiter pattern need the original line breaks
+    folded = raw.casefold()
+    return (any(re.search(p, t) for p in _INJECTION) or bool(re.search(_INJECTION[5], folded))
+            or bool(re.search(_INJECTION[6], folded)))
+
 _REASONING = re.compile(
     r"\b(because|since|so|therefore|thus|hence|otherwise|which means|means that|as a result|leads? to|"
     r"due to|if|then|would|could|unless|whereas|but|perché|quindi|poiché|perciò|dunque|altrimenti|se|ma)\b"
@@ -79,17 +175,6 @@ NEEDS_REVIEW = "Could not assess this answer automatically; it needs human revie
 
 class AnswerRequestBlocked(PermissionError):
     """Raised when someone asks for the answer during an independent check."""
-
-
-def is_answer_request(text: str) -> bool:
-    t = (text or "").casefold()
-    return any(re.search(p, t) for p in _ANSWER_REQUEST)
-
-
-def detect_injection(text: str) -> bool:
-    """True if the text tries to instruct the grader (prompt injection), in English or Italian."""
-    t = (text or "").casefold()
-    return any(re.search(p, t) for p in _INJECTION)
 
 
 def practice_hint(decision: DecisionCard) -> str:

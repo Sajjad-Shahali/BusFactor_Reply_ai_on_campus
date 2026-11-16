@@ -4,3 +4,4 @@ pdfplumber
 pytest
 python-dotenv
 anthropic
+reportlab

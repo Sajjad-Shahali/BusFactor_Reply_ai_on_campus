@@ -6,7 +6,7 @@ import pytest
 
 from busfactor.interview import UnsupportedDecision, create_interview, create_transfer_test, similarity
 from busfactor.knowledge import load_demo_decisions
-from busfactor.models import EvidenceStatus, InterviewQuestion, QuestionType, ReviewStatus
+from busfactor.models import EvidenceStatus, QuestionType, ReviewStatus
 from busfactor.rubrics import AnswerRequestBlocked, evaluate_answer, filter_feedback, is_answer_request
 
 ROOT = Path(__file__).resolve().parents[1]

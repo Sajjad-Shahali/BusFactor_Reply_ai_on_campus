@@ -1,0 +1,29 @@
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["web", "temp", "docs"]
+
+[tool.ruff.lint]
+# correctness-focused rules only: pyflakes, pycodestyle errors/warnings, bugbear
+select = ["E", "F", "W", "B"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"app.py" = ["E402"]            # the app puts src/ on sys.path before importing busfactor
+"scripts/*" = ["E402"]
+"tests/*" = ["E402", "B011"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+check_untyped_defs = true
+files = ["src/busfactor", "scripts"]
+
+[tool.coverage.run]
+source = ["src/busfactor"]
+branch = true
+
+[tool.coverage.report]
+show_missing = false
+skip_covered = true

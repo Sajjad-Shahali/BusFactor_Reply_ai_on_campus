@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import os
+import random
 import re
 import shutil
 import uuid
@@ -32,13 +34,15 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Sequence
 
 from busfactor import auth
 from busfactor import database as db
 from busfactor.coverage import compute_coverage, explain_status
 from busfactor.ingestion import load_pages
-from busfactor.interview import UnsupportedDecision, create_interview, create_transfer_test, is_assessable
+from busfactor.interview import (
+    UnsupportedDecision, bank_entry, create_interview, create_transfer_test, is_assessable,
+)
 from busfactor.knowledge import add_manual_card, confirm_card, decision_id, extract_decisions
 from busfactor.llm_provider import demo_mode, llm_available
 from busfactor.missions import apply_retest, recommend_missions, set_consent
@@ -55,6 +59,8 @@ MAX_DECISIONS = 10
 DEMO_BADGE = "DEMO DATA — synthetic"
 ACTIVE_PROJECT = "active_project"
 OWNER_TAG = "-owner-"   # legacy owner-check ids: Q-<decision>-<member>-owner-<type>
+SIM_TAG = "-sim-"        # defense-simulator question ids: Q-<decision>-<member>-sim-<hex>
+SIM_VERSION_PREFIX = "sim-"   # assessment_version of simulator evidence (practice only, never counted)
 UPLOADS = Path(os.getenv("BUSFACTOR_UPLOADS", db.REPO_ROOT / "uploads"))
 DEMO_UPLOAD_REFUSED = ("Demo mode uses the synthetic demo project, so uploaded files are not processed. "
                        "Set DEMO_MODE=false and LLM_API_KEY to analyse your own file.")
@@ -167,6 +173,20 @@ def decisions(project_id: Optional[str] = None) -> list[DecisionCard]:
     return db.load_all(DecisionCard, project_id=pid) if pid else []
 
 
+def _proj(project_id: str) -> Project:
+    found = db.get_record(Project, project_id)
+    if found is None:
+        raise KeyError(f"Unknown project {project_id}")
+    return found
+
+
+def _card(decision_id: str) -> DecisionCard:
+    found = db.get_record(DecisionCard, decision_id)
+    if found is None:
+        raise KeyError(f"Unknown decision {decision_id}")
+    return found
+
+
 def team_log(viewer_id: str, project_id: Optional[str] = None) -> list[LogEvent]:
     """The action log of one project as `viewer_id` may see it: team events plus their own private steps."""
     return db.load_team_log(viewer_id, _pid(project_id))
@@ -184,8 +204,8 @@ def project_file(project_id: str, name: str) -> Path:
     return UPLOADS / project_id / name
 
 
-def create_project(title: str, course: str = "", files: list[tuple[str, bytes]] = (),
-                   member_names: list[str] = (), actor: str = "agent") -> Project:
+def create_project(title: str, course: str = "", files: Sequence[tuple[str, bytes]] = (),
+                   member_names: Sequence[str] = (), actor: str = "agent") -> Project:
     """Create a NEW project next to the existing ones (nothing is deleted) and open it.
 
     Uploaded documents are stored as text sources for quote checks; they are only read, never run.
@@ -217,7 +237,7 @@ def create_project(title: str, course: str = "", files: list[tuple[str, bytes]] 
         db.log(actor, "add_member", {"members": len(team)}, audience=db.TEAM, project_id=pid)
     _snapshot("baseline", pid)
     open_project(pid)
-    return db.get_record(Project, pid)
+    return _proj(pid)
 
 
 def _readable(path: Path) -> None:
@@ -295,7 +315,7 @@ def extract_project_decisions(actor: str = "agent", project_id: Optional[str] = 
         raise ValueError(EXTRACTION_NEEDS_MODEL)
     if decisions(pid):
         raise ValueError("This project already has decisions; add more by hand.")
-    names = project(pid).source_files
+    names = _proj(pid).source_files
     if not names:
         raise ValueError("Upload the project document first.")
     s = _Steps(actor, "extract_decisions", audience=db.TEAM, project_id=pid)
@@ -404,6 +424,14 @@ def is_owner_check(question: InterviewQuestion) -> bool:
     return question.owner_check or OWNER_TAG in question.id
 
 
+def is_simulator_question(question: InterviewQuestion) -> bool:
+    return SIM_TAG in question.id
+
+
+def is_simulator_evidence(evidence: AssessmentEvidence) -> bool:
+    return evidence.assessment_version.startswith(SIM_VERSION_PREFIX)
+
+
 def my_questions(viewer_id: str, member_id: str) -> list[tuple[InterviewQuestion, Optional[AssessmentEvidence]]]:
     """A member's own questions with their latest evidence. Only the member may call this."""
     evidence = db.get_private_evidence(viewer_id, member_id)  # raises for anyone else
@@ -414,7 +442,7 @@ def my_questions(viewer_id: str, member_id: str) -> list[tuple[InterviewQuestion
 def suggest_check_decisions(member_id: str) -> list[str]:
     """2 confirmed decisions of the member's project they do not own and have not demonstrated."""
     member = _member(member_id)
-    own = db.get_private_evidence(member_id, member_id)
+    own = [e for e in db.get_private_evidence(member_id, member_id) if not is_simulator_evidence(e)]
     demonstrated = {e.decision_id for e in own if e.rubric_score == 2}
     asked = db.load_all(InterviewQuestion, member_id=member_id)
     picks = []
@@ -429,7 +457,8 @@ def suggest_check_decisions(member_id: str) -> list[str]:
 def owner_check_decisions(member_id: str) -> list[str]:
     """Confirmed decisions the member is the declared owner of and has not yet demonstrated."""
     member = _member(member_id)
-    demonstrated = {e.decision_id for e in db.get_private_evidence(member_id, member_id) if e.rubric_score == 2}
+    demonstrated = {e.decision_id for e in db.get_private_evidence(member_id, member_id)
+                    if e.rubric_score == 2 and not is_simulator_evidence(e)}
     return [d.id for d in decisions(member.project_id)
             if d.owner_id == member_id and is_assessable(d) and d.id not in demonstrated]
 
@@ -501,7 +530,7 @@ def submit_answer(question_id: str, answer: str, viewer_id: str) -> Result:
     if owner_check and _answered(viewer_id, q.id):
         raise ValueError("This owner check was already answered; start a new one.")
     s = _Steps(viewer_id, "submit_answer", audience=[viewer_id], project_id=member.project_id)
-    decision = db.get_record(DecisionCard, q.decision_id)
+    decision = _card(q.decision_id)
     if is_answer_request(answer):
         s("answer_request", question_id=q.id, mode=q.mode)
         # practice: point to the source; independent owner check: no hint at all
@@ -521,7 +550,7 @@ def submit_answer(question_id: str, answer: str, viewer_id: str) -> Result:
 def _team_evidence(pid: str) -> list[AssessmentEvidence]:
     """Evidence that may count: this project's, from members who (still) consent to assessment."""
     consenting = {m.id for m in members(pid).values() if m.consent_assessment}
-    return [e for e in db.evidence_for_coverage(pid) if e.member_id in consenting]
+    return [e for e in db.evidence_for_coverage(pid) if e.member_id in consenting and not is_simulator_evidence(e)]
 
 
 def team_coverage(project_id: Optional[str] = None) -> CoverageReport:
@@ -599,7 +628,7 @@ def accept_mission(mission_id: str, member_id: str) -> TeachingMission:
     role = "mentor" if member_id == mission.mentor_id else "learner"
     # one person's consent is visible only to the two people in the mission
     db.log(member_id, "accept_mission", {"decision_id": mission.decision_id, "role": role, "both_accepted": both},
-           audience=[mission.mentor_id, mission.learner_id], project_id=mission.project_id)
+           audience=[m for m in (mission.mentor_id, mission.learner_id) if m], project_id=mission.project_id)
     if both:  # the pairing becomes public only once both agreed (matches the Missions page)
         db.log("agent", "mission_accepted", {"decision_id": mission.decision_id}, audience=db.TEAM,
                project_id=mission.project_id)
@@ -610,9 +639,9 @@ def start_retest(mission_id: str, viewer_id: str) -> InterviewQuestion:
     """A new independent scenario for the learner. Each scenario is used once; raises when none is left."""
     mission = _mission(mission_id)
     member = _check_retest_allowed(mission, viewer_id)
-    decision = db.get_record(DecisionCard, mission.decision_id)
+    decision = _card(mission.decision_id)
     mine = [q for q in db.load_all(InterviewQuestion, member_id=mission.learner_id)
-            if q.decision_id == mission.decision_id]
+            if q.decision_id == mission.decision_id and not is_simulator_question(q)]
     used = [q.prompt for q in mine if q.question_type == QuestionType.transfer]
     answered_at = {e.question_id: e.created_at for e in db.get_private_evidence(viewer_id, viewer_id)}
     current = db.get_record(InterviewQuestion, mission.retest_question_id) if mission.retest_question_id else None
@@ -649,7 +678,7 @@ def submit_retest(mission_id: str, answer: str, viewer_id: str) -> Result:
     if detect_injection(answer):  # never sent to the grader, never stored, coverage untouched
         s("flagged_instructions", mission_id=mission_id)
         return Result(blocked=True, message=INJECTION_FLAGGED)
-    ev = evaluate_answer(q, answer, db.get_record(DecisionCard, mission.decision_id))
+    ev = evaluate_answer(q, answer, _card(mission.decision_id))
     mission = apply_retest(mission, ev)   # raises on any mismatch, before anything is written
     db.save_records(ev, mission)
     s("evaluate_answer", question_id=q.id, evidence_id=ev.id)
@@ -725,8 +754,9 @@ def start_followup(mission_id: str, viewer_id: str, now: Optional[datetime] = No
         raise ValueError("A follow-up check comes after a verified retest.")
     if not followup_due(mission, now):
         raise ValueError(f"The follow-up check opens {FOLLOWUP_DAYS} days after the retest was passed.")
-    decision = db.get_record(DecisionCard, mission.decision_id)
-    mine = [q for q in db.load_all(InterviewQuestion, member_id=viewer_id) if q.decision_id == mission.decision_id]
+    decision = _card(mission.decision_id)
+    mine = [q for q in db.load_all(InterviewQuestion, member_id=viewer_id)
+            if q.decision_id == mission.decision_id and not is_simulator_question(q)]
     used = [q.prompt for q in mine if q.question_type == QuestionType.transfer]
     prior = (db.get_record(InterviewQuestion, mission.retest_question_id) if mission.retest_question_id else None) \
         or create_interview(decision, viewer_id, [])
@@ -828,7 +858,7 @@ def _cell(text: object) -> str:
 def export_team_report(project_id: Optional[str] = None, now: Optional[datetime] = None) -> str:
     """Markdown report for the team (and, if they choose, their TA). Only counts: never a name, answer or score."""
     pid = _pid(project_id)
-    p, report, snaps = project(pid), team_coverage(pid), coverage_snapshots(pid)
+    p, report, snaps = _proj(pid), team_coverage(pid), coverage_snapshots(pid)
     cards = {d.id: d for d in decisions(pid)}
     stamp = (now or utcnow()).strftime("%Y-%m-%d %H:%M UTC")
     pct = f" ({report.numerator / report.denominator:.0%})" if report.denominator else ""
@@ -878,3 +908,240 @@ def export_decisions_csv(project_id: Optional[str] = None) -> str:
         writer.writerow([c.decision_id.rsplit("-", 1)[-1], card.title, card.review_status.value, c.status,
                          len(c.demonstrated_by), ref.file if ref else "", ref.page if ref else ""])
     return out.getvalue()
+
+
+# ------------------------------------------------------------------ defense simulator (practice only)
+
+def simulator_decisions(member_id: str) -> list[str]:
+    """Confirmed, source-backed decisions of the member's project the simulator may ask about."""
+    member = _member(member_id)
+    return [d.id for d in decisions(member.project_id) if is_assessable(d)]
+
+
+def open_simulator_question(member_id: str) -> Optional[InterviewQuestion]:
+    answered = {e.question_id for e in db.get_private_evidence(member_id, member_id)}
+    return next((q for q in db.load_all(InterviewQuestion, member_id=member_id)
+                 if is_simulator_question(q) and q.id not in answered), None)
+
+
+def start_simulator(member_id: str, rng: Optional[random.Random] = None) -> InterviewQuestion:
+    """A mock-oral question: a new independent what-if on a random confirmed decision, no hints.
+
+    Practice only: its evidence never counts toward coverage, mentor eligibility or a mission, and it never
+    uses up the scenarios of a real retest. One open question at a time; each scenario once per learner.
+    """
+    member = _require_assessment_consent(member_id)
+    existing = open_simulator_question(member_id)
+    if existing:
+        return existing
+    pool = simulator_decisions(member_id)
+    if not pool:
+        raise ValueError("The simulator needs at least one confirmed decision.")
+    rng = rng or random.Random()
+    rng.shuffle(pool)
+    mine = db.load_all(InterviewQuestion, member_id=member_id)
+    for did in pool:
+        decision = _card(did)
+        seen = [q.prompt for q in mine if q.decision_id == did and q.question_type == QuestionType.transfer
+                and is_simulator_question(q)]
+        base = create_interview(decision, member_id, [])
+        try:
+            q = create_transfer_test(decision, base, seen)
+        except ValueError:
+            continue   # every scenario of this decision was already simulated: try another decision
+        q = q.model_copy(update={"id": f"Q-{did}-{member_id}{SIM_TAG}{uuid.uuid4().hex[:6]}"})
+        db.save_records(q)
+        db.log("agent", "start_simulator", {"decision_id": did, "question_id": q.id}, audience=[member_id],
+               project_id=member.project_id)
+        return q
+    raise ValueError("You have already practised every scenario for every decision. Ask your team to add more.")
+
+
+def submit_simulator(question_id: str, answer: str, viewer_id: str) -> Result:
+    """Score a simulator answer (practice). Answer requests and instructions to the grader are blocked as in a retest."""
+    q = db.get_record(InterviewQuestion, question_id)
+    if q is None or not is_simulator_question(q):
+        raise KeyError(question_id)
+    if viewer_id != q.member_id:
+        raise PermissionError("You can only answer your own questions.")
+    member = _require_assessment_consent(viewer_id)
+    _require_same_project(member, q.project_id)
+    if _answered(viewer_id, q.id):
+        raise ValueError("This question was already answered; ask for a new one.")
+    s = _Steps(viewer_id, "submit_simulator", audience=[viewer_id], project_id=member.project_id)
+    if is_answer_request(answer):
+        s("blocked_answer_request", question_id=q.id)
+        return Result(blocked=True, message=REFUSAL)
+    if detect_injection(answer):
+        s("flagged_instructions", question_id=q.id)
+        return Result(blocked=True, message=INJECTION_FLAGGED)
+    ev = evaluate_answer(q, answer, _card(q.decision_id))
+    ev = ev.model_copy(update={"assessment_version": SIM_VERSION_PREFIX + ev.assessment_version})
+    db.save_records(ev)
+    s("evaluate_answer", question_id=q.id, evidence_id=ev.id, abstained=ev.status == EvidenceStatus.insufficient_evidence)
+    return Result(evidence=ev)
+
+
+def simulator_history(member_id: str) -> list[tuple[InterviewQuestion, Optional[AssessmentEvidence]]]:
+    """The member's own simulator questions with their evidence (private)."""
+    latest = {e.question_id: e for e in db.get_private_evidence(member_id, member_id)}
+    return [(q, latest.get(q.id)) for q in db.load_all(InterviewQuestion, member_id=member_id)
+            if is_simulator_question(q)]
+
+
+# ------------------------------------------------------------------ course material pointers
+
+COURSE_DIR = "course"
+_STOPWORDS = {"that", "this", "with", "from", "have", "were", "been", "they", "their", "than", "then", "there",
+              "which", "would", "could", "should", "about", "into", "also", "only", "because", "instead", "while",
+              "where", "when", "what", "does", "each", "other", "more", "most", "such", "both", "same", "very",
+              "team", "used", "using", "uses", "make", "made", "over", "under", "after", "before"}
+
+
+def _course_key(pid: str) -> str:
+    return f"course:{pid}"
+
+
+def course_materials(project_id: Optional[str] = None) -> list[str]:
+    raw = db.get_setting(_course_key(_pid(project_id)))
+    return json.loads(raw) if raw else []
+
+
+def add_course_material(name: str, content: bytes, project_id: Optional[str] = None) -> str:
+    """Store a course file (PDF, Markdown or text) so the app can point to its pages. It is only read, never run."""
+    pid = _pid(project_id)
+    if pid == DEMO_PROJECT_ID:
+        raise ValueError(DEMO_IS_FIXED)
+    safe = _safe_name(name)
+    folder = UPLOADS / pid / COURSE_DIR
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / safe
+    path.write_bytes(content)
+    try:
+        if not load_pages(path):
+            raise ValueError("no text")
+    except Exception as err:
+        path.unlink(missing_ok=True)
+        raise ValueError(f"Could not read text from {safe}. Upload a text-based PDF, Markdown or text file.") from err
+    names = course_materials(pid)
+    if safe not in names:
+        db.set_setting(_course_key(pid), json.dumps([*names, safe]))
+    db.log("agent", "add_course_material", {"file": safe}, audience=db.TEAM, project_id=pid)
+    return safe
+
+
+def _terms(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", text.casefold()) if len(w) >= 4 and w not in _STOPWORDS}
+
+
+def find_course_pointers(decision_id: str, limit: int = 3) -> list[dict]:
+    """Pages of the project's course files that talk about this decision: file, page, short snippet.
+
+    Plain keyword overlap with the card's title, rationale and alternatives. It never invents a source: if no page
+    shares enough words with the decision, the list is empty and the app falls back to "ask the TA".
+    """
+    card = db.get_record(DecisionCard, decision_id)
+    if card is None:
+        raise KeyError(f"Unknown decision {decision_id}")
+    query = _terms(" ".join([card.title, card.rationale, *card.alternatives, *card.concept_ids]))
+    if len(query) < 3:
+        return []
+    found: list[dict[str, Any]] = []
+    for name in course_materials(card.project_id):
+        path = UPLOADS / card.project_id / COURSE_DIR / name
+        if not path.is_file():
+            continue
+        for page, text in load_pages(path):
+            hits = query & _terms(text)
+            if len(hits) >= 3 and len(hits) / len(query) >= 0.25:
+                sentences = re.split(r"(?<=[.!?])\s+|\n+", text)
+                best = max(sentences, key=lambda s: len(hits & _terms(s)))
+                found.append({"file": name, "page": page, "matched": sorted(hits), "score": len(hits),
+                              "snippet": " ".join(best.split())[:220]})
+    return sorted(found, key=lambda f: (-f["score"], f["file"], f["page"]))[:limit]
+
+
+# ------------------------------------------------------------------ PDF team report (counts only)
+
+def export_team_report_pdf(project_id: Optional[str] = None, now: Optional[datetime] = None) -> bytes:
+    """A one-page PDF with the coverage chart and the per-decision table. Counts only, like the Markdown report."""
+    from reportlab.graphics.shapes import Drawing, Rect, String
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    pid = _pid(project_id)
+    p, report, snaps = _proj(pid), team_coverage(pid), coverage_snapshots(pid)
+    cards = {d.id: d for d in decisions(pid)}
+    start = snaps[0] if snaps else {"numerator": report.numerator, "denominator": report.denominator}
+    stamp = (now or utcnow()).strftime("%Y-%m-%d %H:%M UTC")
+    styles = getSampleStyleSheet()
+    colour = {"covered": colors.HexColor("#1E9A62"), "single_point_of_failure": colors.HexColor("#D6453B"),
+              "no_explainer": colors.HexColor("#6B7280"), "not_assessed": colors.HexColor("#B8BECC")}
+
+    def bar(label: str, num: int, den: int, y: int) -> list:
+        width = 300 * (num / den if den else 0)
+        return [Rect(110, y, 300, 14, fillColor=colors.HexColor("#E5E9F0"), strokeColor=None),
+                Rect(110, y, width, 14, fillColor=colors.HexColor("#4F6BFF"), strokeColor=None),
+                String(0, y + 3, label, fontSize=10),
+                String(418, y + 3, f"{num}/{den}" + (f" ({num / den:.0%})" if den else ""), fontSize=10)]
+
+    chart = Drawing(480, 50)
+    for item in bar("At the start", start["numerator"], start["denominator"], 30) + \
+            bar("Now", report.numerator, report.denominator, 6):
+        chart.add(item)
+
+    rows = [["ID", "Decision", "Status", "Can explain it"]]
+    marks = []
+    for i, c in enumerate(report.per_decision, 1):
+        card = cards[c.decision_id]
+        unconfirmed = card.review_status != ReviewStatus.verified
+        status = "Not confirmed (not counted)" if unconfirmed else STATUS_WORDS[c.status].split(" (")[0]
+        rows.append([c.decision_id.rsplit("-", 1)[-1], Paragraph(card.title, styles["BodyText"]), status,
+                     str(len(c.demonstrated_by))])
+        marks.append(("TEXTCOLOR", (2, i), (2, i), colors.grey if unconfirmed else colour[c.status]))
+    table = Table(rows, colWidths=[14 * mm, 90 * mm, 50 * mm, 26 * mm], repeatRows=1)
+    table.setStyle(TableStyle([("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("FONTSIZE", (0, 0), (-1, -1), 9),
+                               ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3D9E4")),
+                               ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), *marks]))
+    counts = Counter(m.status.value for m in missions(pid))
+    mission_line = ", ".join(f"{k.replace('_', ' ')}: {n}" for k, n in sorted(counts.items())) or "none proposed yet"
+
+    import io as _io
+    buffer = _io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
+                            bottomMargin=16 * mm, title=f"BusFactor team report: {p.title}", author="BusFactor")
+    demo_note = "  ·  DEMO DATA, synthetic" if pid == DEMO_PROJECT_ID else ""
+    doc.build([
+        Paragraph(f"BusFactor team report: {p.title}", styles["Title"]),
+        Paragraph(f"{p.course or 'No course given'}  ·  generated {stamp}{demo_note}", styles["Normal"]),
+        Spacer(1, 8 * mm), Paragraph("Decision coverage", styles["Heading2"]), chart,
+        Paragraph(f"Single points of failure: {len(report.spof_decision_ids)}", styles["Normal"]),
+        Spacer(1, 5 * mm), Paragraph("Decisions", styles["Heading2"]), table,
+        Spacer(1, 5 * mm), Paragraph("Teaching missions", styles["Heading2"]),
+        Paragraph(mission_line, styles["Normal"]), Spacer(1, 6 * mm),
+        Paragraph("Decision Coverage = critical decisions that 2 or more members can explain, divided by critical "
+                  "decisions that have been assessed. It is a prototype indicator, not a validated metric. Scores are "
+                  "practice feedback and never appear in this report; \"not assessed\" is never counted as failed.",
+                  styles["Italic"]),
+    ])
+    return buffer.getvalue()
+
+
+# ------------------------------------------------------------------ retest progress
+
+def retest_progress(mission_id: str) -> tuple[int, Optional[int]]:
+    """(attempt number, number of scenarios available or None when unknown) for the learner's retest.
+
+    The attempt counts the learner's real transfer questions on this decision (the simulator is not counted).
+    The total is known only for the demo bank; with the model or templates it is open-ended, so we say "attempt n".
+    """
+    mission = _mission(mission_id)
+    decision = _card(mission.decision_id)
+    taken = [q for q in db.load_all(InterviewQuestion, member_id=mission.learner_id)
+             if q.decision_id == mission.decision_id and q.question_type == QuestionType.transfer
+             and not is_simulator_question(q)]
+    bank = bank_entry(decision)
+    return max(len(taken), 1), (len(bank.get("transfer", [])) if bank else None)

@@ -90,4 +90,4 @@ def verify_member(member_id: str, code: str) -> bool:
 
 
 def verify_reviewer(project_id: str, code: Optional[str]) -> bool:
-    return bool(code) and _check(_reviewer_key(project_id), code)
+    return bool(code) and _check(_reviewer_key(project_id), str(code))

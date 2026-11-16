@@ -230,3 +230,124 @@ IT = {
     "Save review": "Salva revisione", "Answer": "Risposta", "A good answer covers:": "Una buona risposta copre:",
     "Review saved.": "Revisione salvata.",
 }
+
+IT.update({
+    # accessibility / coverage verdict
+    "Text version of the map": "Versione testuale della mappa",
+    "3D map of the decisions and who can explain them (text version below)":
+        "Mappa 3D delle decisioni e di chi sa spiegarle (versione testuale qui sotto)",
+    "Nothing has been assessed yet.": "Ancora nulla è stato valutato.",
+    "Members can take a private check on the Private Check page.":
+        "I membri possono fare una verifica privata nella pagina Verifica privata.",
+    "1 decision depends on one person.": "1 decisione dipende da una sola persona.",
+    "{n} decisions depend on one person.": "{n} decisioni dipendono da una sola persona.",
+    "No decision depends on one person.": "Nessuna decisione dipende da una sola persona.",
+    "Next: open Teach Each Other and propose missions.":
+        "Prossimo passo: apri Insegnatevi a vicenda e proponi le missioni.",
+    "Keep it fresh: practise a new 'what if' before the defense.":
+        "Tienila allenata: esercitati su un nuovo «e se» prima della discussione.",
+    "<b>+1</b> decision covered": "<b>+1</b> decisione coperta",
+    "<b>+{n}</b> decisions covered": "<b>+{n}</b> decisioni coperte",
+    "It is not confirmed or has no verified source, so it is not counted.":
+        "Non è confermata o non ha una fonte verificata, quindi non viene contata.",
+    "Review it in Project Setup.": "Rivedila in Impostazione progetto.",
+    # empty states
+    "No decisions yet": "Ancora nessuna decisione",
+    "Add the project's key decisions below: each quote is checked against your document.":
+        "Aggiungi qui sotto le decisioni chiave del progetto: ogni citazione viene controllata nel tuo documento.",
+    "Nothing to answer right now": "Niente a cui rispondere ora",
+    "Choose up to two decisions above and press \u201cGet my questions\u201d.":
+        "Scegli fino a due decisioni qui sopra e premi «Ottieni le mie domande».",
+    "No missions yet": "Ancora nessuna missione",
+    "Press the button above and BusFactor pairs a mentor with a learner for every decision only one person can "
+    "explain.":
+        "Premi il pulsante qui sopra e BusFactor abbina un mentore a uno studente per ogni decisione che sa spiegare "
+        "una sola persona.",
+    "You have no teaching mission as a learner": "Non hai nessuna missione come studente",
+    "A retest opens after a mentor and you both accept a mission on the Teach Each Other page.":
+        "Il nuovo test si apre dopo che tu e un mentore accettate una missione nella pagina Insegnatevi a vicenda.",
+    "Go to Teach Each Other": "Vai a Insegnatevi a vicenda",
+    "Nothing is waiting for review": "Niente in attesa di revisione",
+    "When a member who agreed to human review has an answer the model could not score, it appears here.":
+        "Quando un membro che ha accettato la revisione umana ha una risposta che il modello non ha potuto valutare, "
+        "compare qui.",
+    # retest, simulator
+    "Independent check · no hints": "Verifica indipendente · senza aiuti",
+    "Attempt {n} of {m}": "Tentativo {n} di {m}", "Attempt {n}": "Tentativo {n}",
+    "Defense simulator": "Simulatore di discussione",
+    "A mock oral: a random question on one of your project's decisions, no hints. Practice only: it never changes "
+    "team coverage.":
+        "Un'interrogazione di prova: una domanda casuale su una decisione del tuo progetto, senza aiuti. Solo "
+        "allenamento: non cambia mai la copertura del team.",
+    "Ask me a question": "Fammi una domanda", "Send answer": "Invia risposta",
+    "You have not agreed to be assessed, so the simulator is not available.":
+        "Non hai accettato di essere valutato, quindi il simulatore non è disponibile.",
+    "{n} answered in the simulator": "{n} risposte nel simulatore", "Result": "Risultato",
+    # course material
+    "Course material (optional)": "Materiale del corso (facoltativo)",
+    "Lecture notes or slides of the course. When nobody can explain a decision, BusFactor points to the page that "
+    "talks about it instead of a generic message.":
+        "Appunti o slide del corso. Quando nessuno sa spiegare una decisione, BusFactor indica la pagina che ne parla "
+        "invece di un messaggio generico.",
+    "Add course files (PDF, Markdown or text)": "Aggiungi file del corso (PDF, Markdown o testo)",
+    "Add course material": "Aggiungi materiale del corso",
+    "Where your course material talks about it:": "Dove il materiale del corso ne parla:", "page": "pagina",
+    "Download team report (PDF)": "Scarica il report del team (PDF)",
+})
+
+# sentences built by coverage.py and missions.py: matched by shape, then translated with the same placeholders
+_DYNAMIC = [
+    (r"^(\d+) members have each demonstrated it, so the team does not depend on one person\.$",
+     "{n} members have each demonstrated it, so the team does not depend on one person.",
+     "{n} membri l'hanno dimostrata, quindi il team non dipende da una sola persona."),
+    (r"^Only 1 member has demonstrated it\. If they are absent, nobody can defend it\.$",
+     "Only 1 member has demonstrated it. If they are absent, nobody can defend it.",
+     "Solo 1 membro l'ha dimostrata. Se è assente, nessuno può difenderla."),
+    (r"^Propose a teaching mission so a second member learns it\.$",
+     "Propose a teaching mission so a second member learns it.",
+     "Proponi una missione di insegnamento così un secondo membro la impara."),
+    (r"^Members were checked, but nobody has demonstrated it yet\.$",
+     "Members were checked, but nobody has demonstrated it yet.",
+     "I membri sono stati verificati, ma nessuno l'ha ancora dimostrata."),
+    (r"^The decision's owner can take an owner check; otherwise use the course material or ask the TA\.$",
+     "The decision's owner can take an owner check; otherwise use the course material or ask the TA.",
+     "Il responsabile della decisione può fare la verifica del responsabile; altrimenti usa il materiale del corso "
+     "o chiedi al tutor."),
+    (r"^Nobody has answered a question on it yet\. That is unknown, not failed\.$",
+     "Nobody has answered a question on it yet. That is unknown, not failed.",
+     "Nessuno ha ancora risposto a una domanda su di essa. È sconosciuto, non fallito."),
+    (r"^Members can take a private check on it\.$", "Members can take a private check on it.",
+     "I membri possono fare una verifica privata su di essa."),
+    (r"^(.+) was chosen because they demonstrated (.+) and are willing to mentor; (.+) has not demonstrated it yet "
+     r"and is willing to learn\.$",
+     "{a} was chosen because they demonstrated {b} and are willing to mentor; {c} has not demonstrated it yet and "
+     "is willing to learn.",
+     "{a} è stato scelto perché ha dimostrato {b} ed è disponibile a fare da mentore; {c} non l'ha ancora "
+     "dimostrata ed è disponibile a imparare."),
+    (r"^Nobody has demonstrated (.+) yet, so no mentor was invented; (.+) is pointed to course material or the "
+     r"TA\.$",
+     "Nobody has demonstrated {a} yet, so no mentor was invented; {b} is pointed to course material or the TA.",
+     "Nessuno ha ancora dimostrato {a}, quindi non è stato inventato nessun mentore; {b} viene indirizzato al "
+     "materiale del corso o al tutor."),
+    (r"^Nobody on the team has demonstrated this yet — review the course material for this topic or ask the TA\.$",
+     "Nobody on the team has demonstrated this yet — review the course material for this topic or ask the TA.",
+     "Nessuno nel team l'ha ancora dimostrata: rivedi il materiale del corso su questo argomento o chiedi al tutor."),
+]
+IT.update({english: italian for _, english, italian in _DYNAMIC})
+
+
+def tr_dynamic(text: str) -> str:
+    """Translate a sentence produced by the coverage or mission logic (numbers and names are kept)."""
+    if _lang != "it":
+        return text
+    import re
+    for pattern, _english, italian in _DYNAMIC:
+        match = re.match(pattern, text)
+        if match:
+            groups = match.groups()
+            if len(groups) == 1 and "{n}" in italian:
+                return italian.format(n=groups[0])
+            if groups:
+                return italian.format(**dict(zip("abc", groups, strict=False)))
+            return italian
+    return text
