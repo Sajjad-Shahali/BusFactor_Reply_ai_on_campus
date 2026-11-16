@@ -4,8 +4,8 @@ This file configures the page, builds the sidebar (project, language, identity, 
 page to its module in ui/pages/. Shared helpers are in ui/widgets.py, the theme in ui/theme.py."""
 from __future__ import annotations
 
-import time
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -15,18 +15,20 @@ sys.path.insert(0, str(ROOT))
 import streamlit as st  # noqa: E402
 
 from busfactor import auth  # noqa: E402
+from busfactor import llm_provider  # noqa: E402
 from busfactor import orchestrator as orc  # noqa: E402
 from busfactor.i18n import LANGS, set_lang, t  # noqa: E402
-
 from ui.pages import check, coverage, evidence, overview, retest, setup, teach  # noqa: E402
 from ui.state import Ctx, ctx  # noqa: E402
 from ui.theme import BRAND, CSS, PAGE_HINTS, PAGES  # noqa: E402
-from ui.widgets import avatar, esc, load_project_state, show  # noqa: E402
+from ui.widgets import avatar, esc, load_project_state, model_panel, show  # noqa: E402
 
 st.set_page_config(page_title="BusFactor", page_icon=":material/hub:", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
 orc.ensure_seeded()
 st.session_state["_ctx"] = Ctx()   # fresh per run and per browser session (see ui/state.py)
+# a model connected in this session (key in session memory only) is used for this run; None means the server default
+llm_provider.set_session_config(st.session_state.get("llm"))
 
 # ------------------------------------------------------------------ sidebar
 with st.sidebar:   # the containers fix the display order; the code below fills them in the order logic needs
@@ -119,6 +121,7 @@ with box_foot:
     st.divider()
     if st.toggle(t("Larger text"), key="big-text"):
         st.markdown("<style>html { font-size: 118%; }</style>", unsafe_allow_html=True)
+    model_panel()
     st.caption(t(orc.grading_mode()))
     with st.popover(t("Reset demo data")):
         st.caption(t("Restores the synthetic demo to its starting point (coverage 1/5). Everything done in the demo "

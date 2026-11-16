@@ -21,7 +21,7 @@ from typing import Iterable, Optional
 
 from busfactor import llm_provider
 from busfactor.llm_provider import LLMUnavailable
-from busfactor.models import DEMO_PROJECT_ID, DecisionCard, InterviewQuestion, QuestionType, ReviewStatus
+from busfactor.models import DEMO_PROJECT_ID, DecisionCard, InterviewQuestion, QuestionSource, QuestionType, ReviewStatus
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BANK_PATH = REPO_ROOT / "data" / "demo" / "question_bank.json"
@@ -128,14 +128,17 @@ def create_interview(
     entry = bank_entry(decision)
     generated = _llm_json("question.txt", PROMPT_SCHEMA, question_type=qtype.value, title=decision.title,
                           rationale=decision.rationale, alternatives=alternatives, source=_source_text(decision))
+    from_model = (str(generated.get("prompt", "")).strip() if generated else "")
+    from_bank = (entry or {}).get(qtype.value)
     prompt = (
-        (str(generated.get("prompt", "")).strip() if generated else "")
-        or (entry or {}).get(qtype.value)
+        from_model
+        or from_bank
         or (f"Why did the team decide: \"{decision.title}\" instead of {alternatives}?"
             if qtype == QuestionType.why else
             f"What if one key condition of the project changed? Would \"{decision.title}\" still be "
             f"the right choice over {alternatives}? Explain using the project's data.")
     )
+    source: QuestionSource = "model" if from_model else "demo_bank" if from_bank else "template"
     return InterviewQuestion(
         id=f"Q-{decision.id}-{member_id}-{qtype.value}",
         decision_id=decision.id,
@@ -146,6 +149,7 @@ def create_interview(
         source_refs=decision.source_refs,
         mode="practice",
         project_id=decision.project_id,
+        source=source,
     )
 
 
@@ -176,17 +180,17 @@ def create_transfer_test(
         return bool(text) and all(similarity(text, u) <= MAX_SIMILARITY for u in used)
 
     alternatives = ", ".join(decision.alternatives) or "the alternative"
-    candidates: list[tuple[str, Optional[str], list[str]]] = []
+    candidates: list[tuple[str, Optional[str], list[str], QuestionSource]] = []
     if llm_provider.llm_available():
         for _ in range(2):  # generate, check, regenerate once
             scenario = _valid_scenario(_llm_json("transfer.txt", TRANSFER_SCHEMA, title=decision.title,
                                                  rationale=decision.rationale, alternatives=alternatives,
                                                  prior="\n".join(used)))
             if scenario and different(scenario[0]):
-                candidates.append(scenario)
+                candidates.append((*scenario, "model"))
                 break
     for t in (bank_entry(decision) or {}).get("transfer", []):
-        candidates.append((t["prompt"], t["scenario"], [p["point"] for p in t["rubric"]]))
+        candidates.append((t["prompt"], t["scenario"], [p["point"] for p in t["rubric"]], "demo_bank"))
     if not candidates:  # no model, no bank: a template whose rubric asks for the scenario-specific judgement
         candidates.append((
             f"Imagine an examiner proposes {alternatives} instead of \"{decision.title}\" for a new dataset "
@@ -195,12 +199,13 @@ def create_transfer_test(
             [f"States whether \"{decision.title}\" still holds for the new data, with a reason",
              f"Compares it with {alternatives} using the project's tradeoff",
              "Names what evidence would be needed to be sure"],
+            "template",
         ))
     chosen = next((c for c in candidates if different(c[0])), None)
     if chosen is None:
         raise ValueError("No new independent question is left for this decision. Review it with your mentor "
                          "or the course material, then ask the team to add a scenario.")
-    prompt, condition, points = chosen
+    prompt, condition, points, source = chosen
     return InterviewQuestion(
         id=f"Q-{decision.id}-{prior_question.member_id}-transfer-{uuid.uuid4().hex[:6]}",
         decision_id=decision.id,
@@ -212,4 +217,5 @@ def create_transfer_test(
         mode="independent",
         project_id=decision.project_id,
         scenario=condition,
+        source=source,
     )

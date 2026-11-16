@@ -1,4 +1,5 @@
 """Theme: page names, status labels, CSS and the brand mark."""
+from ui import palettes
 HERO_TITLE = "You split the work.<br><em>Don't split the understanding.</em>"
 HERO_TEXT = ("BusFactor finds the project decisions only one teammate can explain, sets up peer teaching between "
              "teammates, and checks with a new question that the knowledge really moved.")
@@ -22,7 +23,7 @@ EVIDENCE_PILL = {"demonstrated": ("Demonstrated", "green"), "needs_practice": ("
                  "insufficient_evidence": ("Not scored: needs human review", "gray")}
 
 
-CSS = """
+_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root {
@@ -396,9 +397,15 @@ button:focus-visible, [role="tab"]:focus-visible, summary:focus-visible { outlin
 </style>
 """
 
-BRAND = """<div class="bf-brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+_BRAND = """<div class="bf-brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <circle cx="5" cy="6" r="2.4" fill="currentColor"/><circle cx="19" cy="6" r="2.4" fill="currentColor"/>
 <circle cx="5" cy="18" r="2.4" fill="currentColor"/><circle cx="19" cy="18" r="2.4" fill="currentColor"/>
 <path d="M12 8.5 15.5 12 12 15.5 8.5 12Z" fill="#2F4FD8"/>
 <path d="M7 7.3 10 10.3M17 7.3 14 10.3M7 16.7l3-3M17 16.7l-3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
 </svg>BusFactor</div>"""
+
+# the active palette (BUSFACTOR_PALETTE) is applied once; status colours keep their meaning in every palette
+# a flat palette's overrides go INSIDE the <style> block (after the rules they replace)
+_sheet = palettes.recolor(_CSS)
+CSS = _sheet.replace("</style>", palettes.overrides() + "</style>") if palettes.overrides() else _sheet
+BRAND = palettes.recolor(_BRAND)

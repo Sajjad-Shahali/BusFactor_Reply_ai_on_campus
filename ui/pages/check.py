@@ -1,7 +1,6 @@
 """Page 2: a member's private check, consent and owner check."""
 from __future__ import annotations
 
-
 import streamlit as st
 
 from busfactor import orchestrator as orc
@@ -11,7 +10,7 @@ from ui.theme import (
     EVIDENCE_PILL,
 )
 from ui.widgets import (
-    clear_draft, dlabel, draft_box, empty_state, esc, need_viewer, next_step_card, page_header, page_nav, pill, privacy_panel, show,
+    source_chip, clear_draft, dlabel, draft_box, empty_state, esc, need_viewer, next_step_card, page_header, page_nav, pill, privacy_panel, show,
 )
 
 
@@ -81,6 +80,7 @@ def render() -> None:
             show(f'{pill(kind_label, "blue")} '
                  f'<span class="bf-muted">{esc(dlabel(q.decision_id))} · {esc(cx.cards[q.decision_id].title)}</span>')
             show(f'<div class="bf-question">{esc(q.prompt)}</div>')
+            show(source_chip(q))
             answer = draft_box(f"a-{q.id}", t("Your answer"), 110)
             if st.button(t("Submit"), type="primary", key=f"submit-{q.id}"):
                 with st.spinner(t("Checking your answer…")):

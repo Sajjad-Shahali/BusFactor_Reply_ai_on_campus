@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import uuid
 from pathlib import Path
 from typing import Callable, Optional
 
+from busfactor import llm_provider
 from busfactor.ingestion import load_pages
 from busfactor.models import DEMO_PROJECT_ID, DecisionCard, ReviewStatus, SourceRef
 
@@ -85,7 +85,8 @@ def decision_id(project_id: str, n: int) -> str:
 # ---------------------------------------------------------------- helpers
 
 def demo_mode() -> bool:
-    return os.getenv("DEMO_MODE", "false").strip().lower() in {"1", "true", "yes"}
+    """Offline (synthetic demo cards) unless a model is connected for this session."""
+    return llm_provider.demo_mode()
 
 
 def _normalise(text: str) -> str:

@@ -533,6 +533,49 @@ IT.update({
         "progetti e la demo non sono toccati.",
 })
 
+
+# ---- connect a model, question source, quiz
+IT.update({
+    "Model: connected": "Modello: connesso", "Connect a model": "Collega un modello",
+    "Model connected (this session only): {m}": "Modello collegato (solo questa sessione): {m}",
+    "No model connected: questions and scoring run offline on the synthetic demo data.":
+        "Nessun modello collegato: domande e punteggi funzionano offline sui dati demo sintetici.",
+    "Disconnect": "Scollega", "Provider": "Fornitore", "API key": "Chiave API", "Model name": "Nome del modello",
+    "Base URL": "URL di base",
+    "The server already has a model configured: {m}": "Il server ha già un modello configurato: {m}",
+    "Kept in this session's memory only: not saved to the database, the logs or any export.":
+        "Conservata solo nella memoria di questa sessione: non viene salvata nel database, nei registri o in "
+        "esportazioni.",
+    "Leave empty for OpenAI. For a model on this computer use e.g. http://localhost:11434/v1 (Ollama); no key is "
+    "needed then.":
+        "Lascia vuoto per OpenAI. Per un modello su questo computer usa ad es. http://localhost:11434/v1 (Ollama); "
+        "in quel caso non serve la chiave.",
+    "I understand that the project text and my team's answers are sent to this provider to write questions and "
+    "score answers.":
+        "Capisco che il testo del progetto e le risposte del mio team vengono inviati a questo fornitore per scrivere "
+        "domande e valutare le risposte.",
+    "Connect and test": "Collega e prova",
+    "The provider rejected the key (401). Check it and the model name.":
+        "Il fornitore ha rifiutato la chiave (401). Controllala e controlla il nome del modello.",
+    "The provider rejected the key (403). Check it and the model name.":
+        "Il fornitore ha rifiutato la chiave (403). Controllala e controlla il nome del modello.",
+    "Cannot reach the model API (network).": "Impossibile raggiungere l'API del modello (rete).",
+    "Model rate-limited; try again shortly.": "Modello con limite di richieste; riprova tra poco.",
+    "Enter an API key.": "Inserisci una chiave API.",
+    "The model did not return JSON.": "Il modello non ha restituito JSON.",
+    "The connection test failed.": "La prova di connessione non è riuscita.",
+    "Written by the connected model": "Scritta dal modello collegato",
+    "From the synthetic demo bank": "Dalla banca demo sintetica",
+    "Fixed template (no model connected)": "Modello fisso (nessun modello collegato)",
+    "Start a {n}-question quiz": "Avvia un quiz di {n} domande", "Quiz: question {n} of {m}": "Quiz: domanda {n} di {m}",
+    "Quiz finished: {a} strong, {b} partly there, {c} not yet, out of {n}.":
+        "Quiz finito: {a} solide, {b} a metà, {c} non ancora, su {n}.",
+    "{n} answer(s) could not be scored automatically and wait for human review.":
+        "{n} risposta/e non ha potuto essere valutata automaticamente e aspetta la revisione umana.",
+    "A quiz is practice only: it never changes team coverage.":
+        "Un quiz è solo allenamento: non cambia mai la copertura del team.",
+})
+
 # sentences built by coverage.py and missions.py: matched by shape, then translated with the same placeholders
 _DYNAMIC = [
     (r"^(\d+) members have each demonstrated it, so the team does not depend on one person\.$",

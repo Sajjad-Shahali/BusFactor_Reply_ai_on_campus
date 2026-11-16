@@ -11,9 +11,11 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from busfactor import llm_provider
 from busfactor import orchestrator as orc
 from busfactor.i18n import t
 from busfactor.models import MissionStatus
+from ui import palettes
 from ui.state import ctx
 from ui.theme import PAGES
 
@@ -105,7 +107,7 @@ def pill(label: str, kind: str) -> str:
     return f'<span class="bf-pill bf-{kind}"{title}>{icon}{esc(t(label))}</span>'
 
 
-MEMBER_COLORS = ["#4F6BFF", "#14B8A6", "#F59E0B", "#D946EF", "#38BDF8", "#F87171"]
+MEMBER_COLORS = [palettes.color("#4F6BFF"), "#14B8A6", "#F59E0B", "#D946EF", "#38BDF8", "#F87171"]
 
 
 def avatar(member_id: str, size: int = 34) -> str:
@@ -141,7 +143,7 @@ def ring(num: int, den: int, base_num: int) -> str:
     label = (f"<b>{num}/{den}</b><span>{frac:.0%} {t('covered')}</span>" if den
              else f"<b>–</b><span>{t('not measurable')}</span>")
     return (f'<div class="bf-ring" role="img" aria-label="{num}/{den}"><svg viewBox="0 0 160 160" aria-hidden="true"><defs>'
-            f'<linearGradient id="bfg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7189FF"/>'
+            f'<linearGradient id="bfg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{palettes.color("#7189FF")}"/>'
             f'<stop offset="1" stop-color="#2BD99F"/></linearGradient></defs>'
             f'<circle cx="80" cy="80" r="62" class="trk"/>'
             f'<circle cx="80" cy="80" r="62" class="val" style="stroke-dasharray:{circ:.1f};--from:{start:.1f};'
@@ -219,7 +221,7 @@ def _three_tag() -> str:
 def knowledge_map(report, improved: list[str], height: int = 470) -> None:
     """3D map: one node per decision, one orbiting light per person who can explain it. Counts only."""
     cx = ctx()
-    template = (ROOT / "web" / "knowledge_map.html").read_text(encoding="utf-8")
+    template = palettes.recolor((ROOT / "web" / "knowledge_map.html").read_text(encoding="utf-8"))
     nodes = [{"id": c.decision_id, "title": cx.cards[c.decision_id].title, "n": len(c.demonstrated_by), "status": c.status}
              for c in report.per_decision]
     data = json.dumps({"nodes": nodes, "improved": improved}).replace("</", "<\\/")
@@ -340,3 +342,69 @@ def humanize_action(action: str) -> str:
     if text is None:
         text = action.replace(".", " \u2192 ").replace("_", " ").capitalize() + "."
     return t(text)
+
+
+
+# ------------------------------------------------------------------ connect a model (this session only)
+SOURCE_TEXT = {"model": "Written by the connected model", "demo_bank": "From the synthetic demo bank",
+               "template": "Fixed template (no model connected)"}
+
+
+def source_chip(question) -> str:
+    """Who wrote a question, shown next to it so nobody mistakes a template for model output."""
+    return f'<span class="bf-muted">{esc(t(SOURCE_TEXT.get(question.source, SOURCE_TEXT["template"])))}</span>'
+
+
+def _connect_model() -> None:
+    """Button callback: test the typed connection and, if it works, keep it for this session only."""
+    state = st.session_state
+    provider = state.get("llm-provider", "anthropic")
+    cfg = llm_provider.Config(
+        provider=provider, api_key=(state.get("llm-key") or "").strip(),
+        model=(state.get("llm-model") or "").strip() or llm_provider.DEFAULT_MODELS[provider],
+        base_url=(state.get("llm-base") or "").strip() if provider == "openai" else "")
+    ok, message = llm_provider.test_connection(cfg)
+    state["llm-msg"] = (ok, message)
+    if ok:
+        state["llm"] = cfg
+        state["llm-key"] = ""          # the typed key does not stay in the page's input
+
+
+def _disconnect_model() -> None:
+    st.session_state.pop("llm", None)
+    st.session_state["llm-key"] = ""
+    st.session_state.pop("llm-msg", None)
+
+
+def model_panel() -> None:
+    """Connect Claude, OpenAI/Codex or a local OpenAI-compatible model for THIS browser session.
+
+    The key lives in this session's memory only (not the database, logs or exports) and is gone on Disconnect.
+    """
+    cfg = llm_provider.get_session_config()
+    title = t("Model: connected") if cfg else t("Connect a model")
+    with st.expander(title, expanded=False):
+        st.caption(t(llm_provider.describe_connection()) if not cfg else
+                   t("Model connected (this session only): {m}").format(m=cfg.label))
+        if cfg:
+            st.button(t("Disconnect"), key="llm-disconnect", on_click=_disconnect_model)
+            return
+        env = llm_provider.env_config()
+        if env:
+            st.caption(t("The server already has a model configured: {m}").format(m=env.label))
+        st.selectbox(t("Provider"), list(llm_provider.PROVIDERS), format_func=lambda p: llm_provider.PROVIDERS[p],
+                     key="llm-provider")
+        provider = st.session_state.get("llm-provider", "anthropic")
+        st.text_input(t("API key"), type="password", key="llm-key",
+                      help=t("Kept in this session's memory only: not saved to the database, the logs or any export."))
+        st.text_input(t("Model name"), key="llm-model", placeholder=llm_provider.DEFAULT_MODELS[provider])
+        if provider == "openai":
+            st.text_input(t("Base URL"), key="llm-base", placeholder=llm_provider.DEFAULT_BASE_URL,
+                          help=t("Leave empty for OpenAI. For a model on this computer use e.g. http://localhost:11434/v1 "
+                                 "(Ollama); no key is needed then."))
+        agreed = st.checkbox(t("I understand that the project text and my team's answers are sent to this provider "
+                               "to write questions and score answers."), key="llm-consent")
+        st.button(t("Connect and test"), key="llm-connect", type="primary", disabled=not agreed, on_click=_connect_model)
+        result = st.session_state.get("llm-msg")
+        if result and not result[0]:
+            st.error(t(result[1]))

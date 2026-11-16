@@ -107,6 +107,8 @@ In the demo, coverage starts at **1/5**. Member B teaches Member D why the team 
 | Who can see what | One panel on the main pages says exactly who sees answers, coverage, sessions, reviews and the log. |
 | English and Italian interface | Switch in the sidebar; the page you are on and your identity are kept. |
 | Offline demo mode | Runs with no API key on synthetic data. |
+| Connect a model | Claude, OpenAI/Codex models or a local model, connected from the sidebar for one browser session. The model then writes the questions and retest scenarios and scores answers. |
+| Quick quiz | Five model-written questions in a row in the Defense simulator; practice only. |
 | Docker image | `docker compose up` and open <http://localhost:8501>. |
 
 ## Screenshots
@@ -160,7 +162,7 @@ docker compose up --build
 Open <http://localhost:8501>. The database and uploaded documents live in the `busfactor-data` volume, so they survive restarts. Demo mode is the default; for the live model:
 
 ```bash
-DEMO_MODE=false LLM_API_KEY=sk-... docker compose up --build
+DEMO_MODE=false LLM_API_KEY=sk-... docker compose up --build      # or connect a model from the sidebar instead
 ```
 
 Without compose: `docker build -t busfactor . && docker run -p 8501:8501 -v busfactor-data:/data busfactor`.
@@ -174,14 +176,18 @@ Settings live in `.env` (copy it from `.env.example`; never commit it).
 | Variable | Default | Meaning |
 |---|---|---|
 | `DEMO_MODE` | `true` | `true`: offline, no model calls, answers scored by a fixed keyword rubric. `false`: use the live model. |
-| `LLM_API_KEY` | empty | Anthropic API key, needed only when `DEMO_MODE=false`. |
+| `LLM_PROVIDER` | `anthropic` | `anthropic` (Claude) or `openai` (OpenAI, Codex models, or any OpenAI-compatible / local endpoint). |
+| `LLM_API_KEY` | empty | API key for a server-wide model, needed only when `DEMO_MODE=false`. A local model needs none. |
+| `LLM_BASE_URL` | empty | `openai` provider only: the endpoint, for example `http://localhost:11434/v1` for Ollama. |
+| `BUSFACTOR_ALLOW_PRIVATE_LLM_URLS` | `false` | Allow a model on a private network. Link-local and cloud-metadata addresses stay blocked. |
+| `BUSFACTOR_PALETTE` | `brass` | Colour palette: `brass` (default), `classic`, `forest`, `teal`, `rose`, or the flat `mono`, `bordeaux`, `olive`, `slate` (see [Colour palettes](#colour-palettes)). |
 | `LLM_MODEL` | `claude-opus-5-5` | Model used for extracting decisions, writing questions and grading answers. |
 | `BUSFACTOR_DB` | `busfactor.db` in the repo root | Optional path to the SQLite database. |
 | `BUSFACTOR_UPLOADS` | `uploads/` in the repo root | Optional folder for uploaded project documents. |
 | `BUSFACTOR_REMINDER_DAYS` | `2` | Days an accepted mission can sit idle before both people are reminded. |
 | `BUSFACTOR_FOLLOWUP_DAYS` | `3` | Days after a passed retest before the follow-up question opens. |
 
-> With `DEMO_MODE=false`, the project text and the students' answers are sent to the API. Only use files you are allowed to share and members who agreed to take part.
+> With a model connected (from the sidebar or with `DEMO_MODE=false`), the project text and the students' answers are sent to the provider. Only use files you are allowed to share and members who agreed to take part.
 
 ## Using it for your own project
 
@@ -205,6 +211,61 @@ The demo is a fictional team, so it has no sign-in: "Who are you?" is a dropdown
 - A reviewer sees only answers from members who ticked *"Allow a human reviewer to read my answers…"*, and never their names. The log records that a review happened, never the answer or the score. A reviewed retest updates the mission and coverage exactly like an automatic score.
 - **Keep me signed in** (optional, per member) adds a signed token to the page link for 7 days so the code is not retyped on a refresh. Anyone who has that link can open that member's answers until it expires, so it must not be shared; **Sign out** removes it. Tokens are bound to one member and signed with a server secret.
 - Projects created without codes (for example by script) keep the dropdown. **Project Setup → Access codes** turns them on, or issues new codes (which signs everyone out).
+
+## Connect a model
+
+Without a model the app is a demo: questions come from the synthetic bank and scoring is a keyword rubric. To use a real
+model, open **Connect a model** in the sidebar:
+
+1. Pick a provider: **Claude (Anthropic)**, or **OpenAI, Codex or a compatible / local model**. The second option takes any
+   OpenAI-compatible endpoint: OpenAI itself (including the Codex models), or a model running on your own machine with
+   Ollama or LM Studio (base URL such as `http://localhost:11434/v1`, no key needed).
+2. Paste the API key, optionally a model name, tick the consent box and press **Connect and test**. One small request
+   checks that the key and model work.
+
+What the model then does: it **writes the Why and What-if questions** from the confirmed decision card, **writes a new retest
+scenario** (with its own scoring points) every time, **scores answers** 0/1/2 with feedback, and **proposes decision cards**
+from an uploaded report. Every question shows who wrote it (model, demo bank or template). The Defense simulator and the quick
+quiz never run out of questions, because the model writes fresh scenarios.
+
+How it is kept safe:
+
+- **The key stays in that browser session's memory.** It is not written to the database, the logs or an export, it is not shown
+  again after connecting, and **Disconnect** (or closing the session) removes it. Each session has its own connection: one
+  person connecting a model does not connect it for anybody else.
+- **Consent first.** The panel states that the project text and the team's answers are sent to the provider, and the Connect
+  button stays disabled until it is ticked.
+- **A user-supplied URL cannot reach internal services.** Only http(s) is accepted; link-local, cloud-metadata and private-network
+  addresses are refused (a model on this machine is allowed; a private network needs `BUSFACTOR_ALLOW_PRIVATE_LLM_URLS=true`).
+- **The model is not trusted blindly.** Output must match a JSON schema; invalid output is retried once and otherwise the
+  answer is not scored and goes to human review. Answer requests and instructions to the grader are still blocked in code
+  before anything is sent to the model.
+
+For a whole server, set `LLM_PROVIDER`, `LLM_API_KEY` (and `LLM_BASE_URL`) and `DEMO_MODE=false` instead; the panel then shows
+that the server already has a model. "Codex" here means the OpenAI models served through the API; the Codex command-line
+tool itself is not driven by the app.
+
+## Colour palettes
+
+The stylesheet is written in roles (background, surface, accent fill, accent text, second accent), so a palette only says what
+each role looks like. Status colours (green fine, red risk, amber attention) are not part of a palette and keep their meaning.
+Choose one with `BUSFACTOR_PALETTE`; the default, `brass`, matches `.streamlit/config.toml`. For another palette set the same primary colour in that file (the flags
+`ui.palettes.streamlit_theme_flags("<name>")` print the matching values). Every palette is tested for contrast: white text on
+every button fill and accent and muted text on every background are at least 4.5:1.
+
+| Name | Look |
+|---|---|
+| `brass` (default) | Espresso & Brass: warm brown-black, brass buttons, sage secondary |
+| `classic` | the original navy with blue and green |
+| `forest` | deep green-black, emerald buttons, gold highlights |
+| `teal` | ink teal, deep-teal buttons, lime accents |
+| `rose` | neutral graphite, rose buttons, gold secondary |
+| `mono` | flat: neutral black and grey, signal-yellow highlights and buttons |
+| `bordeaux` | flat: wine-black, wine buttons, cream highlights |
+| `olive` | flat: olive-black, olive buttons, sand highlights |
+| `slate` | flat: cool slate, slate-teal buttons, amber highlights |
+
+"Flat" palettes switch off every gradient, glow and grid texture and use solid colours only.
 
 ## Interface language
 
@@ -261,7 +322,7 @@ docs/               README screenshots, demo GIF, CALIBRATION.md, PILOT_PROTOCOL
 Dockerfile, docker-compose.yml, pyproject.toml (ruff, mypy, coverage), .github/workflows/tests.yml
 ```
 
-Built with Python 3.11+, Streamlit, Pydantic 2, SQLite, pdfplumber, reportlab, the Anthropic SDK and pytest.
+Built with Python 3.11+, Streamlit, Pydantic 2, SQLite, pdfplumber, reportlab, the Anthropic SDK (for Claude), plain HTTPS for OpenAI-compatible models, and pytest.
 
 ## Guarantees enforced in code
 
@@ -300,7 +361,7 @@ Numbers below are what the repository measures today. None of them is a validati
 
 | Check | Result |
 |---|---|
-| Automated tests | 303 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
+| Automated tests | 350 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
 | Lint and types | `ruff` and `mypy` run clean in CI on Python 3.11 and 3.12 |
 | Answer-request guard | 38/38 adversarial cases blocked (paraphrases, Italian/French/Spanish/German, spelling tricks, look-alike letters) |
 | Prompt-injection guard | 37/37 adversarial cases blocked (role changes, score demands, JSON, other languages, spacing tricks) |
@@ -356,7 +417,7 @@ python -m ruff check .        # lint
 python -m mypy                # types
 ```
 
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 303 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
+The tests run offline: the model is replaced by a deterministic fake. At the last run, 350 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
 
 ## Limitations
 
@@ -369,6 +430,7 @@ The tests run offline: the model is replaced by a deterministic fake. At the las
 - The open project is one setting shared by everyone using the same server; two people switching projects at the same moment can briefly see each other's choice. Run one instance per team.
 - Uploaded documents are stored as plain files in `uploads/<project id>/` on the machine running the app, and the database (`busfactor.db`) holds answers in plain text. Deleting a project removes its documents and records.
 - The live model's grading has not been calibrated against human graders yet. The code checks that its output is consistent and abstains when it is not, but a consistent grade can still be wrong.
+- A model connected for a session keeps its key in the server's memory for that session; on a shared or public deployment that is only as private as the server. Questions and scores written by a model can be wrong or badly worded, and calls cost money on the provider's side. The base-URL check does not stop DNS-rebinding tricks.
 - Injection detection uses patterns (English and Italian). A cleverly worded attempt can get past it; the model is also told to report instructions in the answer, and a 2 must agree with its own point-by-point judgement.
 - The offline keyword rubric exists only for the synthetic demo and only for English (plus a few Italian words).
 - Only the interface is translated into Italian. Some explanatory sentences from the coverage logic are English, and the report export is English.
