@@ -40,8 +40,10 @@ def page_text(at: AppTest) -> str:
 
 
 def test_interface_switches_to_italian_and_back():
-    at = open_app()
-    at.sidebar.selectbox(key="lang").set_value("it")
+    # the language is per thread: AppTest formats widget labels in this (test) thread, so mirror the session language
+    set_lang("it")
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
+    at.query_params["lang"] = "it"
     at.run()
     assert not at.exception, at.exception
     assert "DATI DEMO — sintetici" in " ".join(md.value for md in at.sidebar.markdown)
@@ -49,9 +51,10 @@ def test_interface_switches_to_italian_and_back():
     text = page_text(at)
     assert "Copertura del team" in text and "Punto singolo di fallimento" in text
     assert "1/5 (20%)" in text                      # numbers are language independent
-    at.sidebar.selectbox(key="lang").set_value("en")
-    at.run()
-    assert "Team Coverage" in page_text(at)
+    set_lang("en")
+    english = open_app()
+    goto(english, "3. Team Coverage")
+    assert "Team Coverage" in page_text(english) and "Copertura del team" not in page_text(english)
 
 
 def test_every_italian_entry_keeps_its_placeholders():

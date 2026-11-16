@@ -7,21 +7,24 @@ the demo data or the model, and answers can be written in any language (grammar 
 """
 from __future__ import annotations
 
+import threading
+
 LANGS = {"en": "English", "it": "Italiano"}
-_lang = "en"
+# Streamlit runs each session's script in its own thread: a thread-local keeps one session's language from leaking
+# into another session of the same server process. set_lang() is called at the start of every run.
+_state = threading.local()
 
 
 def set_lang(code: str) -> None:
-    global _lang
-    _lang = code if code in LANGS else "en"
+    _state.lang = code if code in LANGS else "en"
 
 
 def get_lang() -> str:
-    return _lang
+    return getattr(_state, "lang", "en")
 
 
 def t(text: str) -> str:
-    return IT.get(text, text) if _lang == "it" else text
+    return IT.get(text, text) if get_lang() == "it" else text
 
 
 IT = {
@@ -338,7 +341,7 @@ IT.update({english: italian for _, english, italian in _DYNAMIC})
 
 def tr_dynamic(text: str) -> str:
     """Translate a sentence produced by the coverage or mission logic (numbers and names are kept)."""
-    if _lang != "it":
+    if get_lang() != "it":
         return text
     import re
     for pattern, _english, italian in _DYNAMIC:

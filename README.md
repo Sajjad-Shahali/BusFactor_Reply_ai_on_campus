@@ -12,6 +12,9 @@ An AI agent that finds the project decisions only one teammate can explain, orga
 [![Pydantic](https://img.shields.io/badge/Models-Pydantic%202-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![SQLite](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](#run-with-docker)
+[![Lint: ruff](https://img.shields.io/badge/lint-ruff-261230?logo=ruff&logoColor=D7FF64)](pyproject.toml)
+[![Types: mypy](https://img.shields.io/badge/types-mypy-2A6DB2)](pyproject.toml)
+[![WCAG AA](https://img.shields.io/badge/contrast-WCAG%20AA-1f883d)](#accessibility)
 [![Languages](https://img.shields.io/badge/UI-English%20%7C%20Italiano-1f883d)](#interface-language)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-prototype-orange)](#limitations)
@@ -35,8 +38,10 @@ An AI agent that finds the project decisions only one teammate can explain, orga
 - [Using it for your own project](#using-it-for-your-own-project)
 - [Access codes and human review](#access-codes-and-human-review)
 - [Interface language](#interface-language)
+- [Accessibility](#accessibility)
 - [Architecture](#architecture)
 - [Guarantees enforced in code](#guarantees-enforced-in-code)
+- [Quality and evidence](#quality-and-evidence)
 - [Example runs](#example-runs-demo-mode)
 - [Testing](#testing)
 - [Limitations](#limitations)
@@ -81,7 +86,11 @@ In the demo, coverage starts at **1/5**. Member B teaches Member D why the team 
 | Spaced follow-up and reminders | A nudge when an accepted mission sits idle, and a second new question after a few days. |
 | Access codes (live projects) | Each member unlocks their own answers with a personal code; hashed, shown once. |
 | Human review queue | A reviewer scores answers the model could not, only for members who agreed, without names. |
-| Team report export | Markdown report and CSV of decision coverage: counts only. |
+| Team report export | PDF (with a coverage chart), Markdown and CSV of decision coverage: counts only. |
+| Defense simulator | A mock oral: random new questions on any decision, no hints. Practice only: never counted in coverage. |
+| Course-material pointers | When nobody can explain a decision, the app shows the page of your course files that talks about it. |
+| Hardened guards | Answer-request and prompt-injection detection survives paraphrases, other languages and spelling tricks (see [Quality and evidence](#quality-and-evidence)). |
+| Accessible by design | Measured contrast, keyboard focus, status icons, phone layout (see [Accessibility](#accessibility)). |
 | English and Italian interface | Switch in the sidebar; the page you are on and your identity are kept. |
 | Offline demo mode | Runs with no API key on synthetic data. |
 | Docker image | `docker compose up` and open <http://localhost:8501>. |
@@ -96,7 +105,8 @@ The loop above, as the app shows it. All screenshots use the synthetic demo data
 | **3. Team Coverage**: who can explain which decision<br>![Team Coverage](docs/screenshots/04_team_coverage.png) | **4. Teach Each Other**: consent-gated peer-teaching missions<br>![Teach Each Other](docs/screenshots/05_teach_each_other.png) |
 | **5. Defense Retest**: a new question, no hints<br>![Defense Retest](docs/screenshots/06_defense_retest.png) | **6. Evidence & Limits**: sources, action log and limits<br>![Evidence and Limits](docs/screenshots/07_evidence_limits.png) |
 | **After the retest**: coverage 2/5, one single point of failure fewer<br>![Coverage after the retest](docs/screenshots/08_coverage_after_retest.png) | **Italian interface**: same page, same numbers<br>![Italian interface](docs/screenshots/09_italian_coverage.png) |
-| **Human review queue**: answers without names, scored by a reviewer<br>![Review queue](docs/screenshots/10_review_queue.png) | |
+| **Human review queue**: answers without names, scored by a reviewer<br>![Review queue](docs/screenshots/10_review_queue.png) | **Defense simulator**: a mock oral, practice only<br>![Defense simulator](docs/screenshots/12_defense_simulator.png) |
+| **Empty states** say what to do next<br>![Empty state](docs/screenshots/13_empty_state.png) | **On a phone**: the verdict first, stats stacked<br><img src="docs/screenshots/11_mobile_coverage.png" alt="Team Coverage on a phone" width="260"> |
 
 There is also a static landing page, `web/index.html`, with a 3D knowledge map (`web/knowledge_map.html`). Open it in a browser; "Open the demo" links to the Streamlit app.
 
@@ -166,6 +176,9 @@ Settings live in `.env` (copy it from `.env.example`; never commit it).
 4. **Owner check**: the person who made a decision answers one independent question on it. Owning a decision is not proof of understanding it; only a full answer lets them mentor it.
 5. Teammates take private checks, missions are proposed, and the learner takes the retest, as in the demo. **Team Coverage → Export** downloads the team report.
 
+6. Optional: upload your **course material** (lecture notes, slides) in Project Setup. When nobody can explain a decision, the Teach page shows the page that talks about it, instead of a generic "ask the TA".
+7. Before the oral, each member can run the **Defense simulator** (Defense Retest page) for random questions on any decision. It is practice only and never changes coverage or mentor eligibility.
+
 Without the live model, your own project still works for review and questions, but answers are **not scored automatically**: they wait for human review, so coverage does not move.
 
 ## Access codes and human review
@@ -184,7 +197,7 @@ Pick **English** or **Italiano** at the top of the sidebar (or open the app with
 ## Architecture
 
 ```
-app.py (Streamlit, 6 pages + overview)
+app.py (page config, sidebar, navigation)  →  ui/pages/*.py (one module per page)  →  ui/widgets.py, ui/theme.py
    │
    ▼
 orchestrator.py ── runs the steps in order, logs each one (max 6 steps per action)
@@ -211,23 +224,28 @@ orchestrator.py ── runs the steps in order, logs each one (max 6 steps per a
 | `i18n.py` | `t("English text")` returns the Italian text when Italian is selected. |
 | `models.py` | Shared data models. |
 | `database.py` | SQLite storage, private answers, action log, loading the demo data. |
-| `orchestrator.py` | Runs the steps in order and logs each one; also reminders, follow-up, review queue and report export. |
-| `app.py` | Streamlit app with 6 pages plus an overview. |
+| `orchestrator.py` | Runs the steps in order and logs each one; also reminders, follow-up, review queue, defense simulator, course pointers and report export (Markdown, CSV, PDF). |
+| `app.py` | Entry point: page config, sidebar (project, language, identity, navigation) and dispatch to the selected page. |
+| `ui/pages/` | One module per page (`overview`, `setup`, `check`, `coverage`, `teach`, `retest`, `evidence`), each with `render()`. |
+| `ui/widgets.py`, `ui/theme.py`, `ui/state.py` | Shared helpers and empty states, CSS and labels, and the per-session context (never a module global, so sessions cannot see each other). |
 
 Repository layout:
 
 ```
-app.py              Streamlit app
+app.py              Streamlit entry point
+ui/                 interface: theme, widgets, per-session state, one module per page
 src/busfactor/      application modules (above)
 prompts/            model prompts (question, transfer, grade)
 data/demo/          synthetic demo project, members, questions and evidence
 tests/              pytest suite (runs offline)
+scripts/            calibrate.py (grader vs reference scores), pilot_summary.py (counts for a pilot)
+data/calibration/   40 reference answers for the grader calibration
 web/                static landing page and 3D knowledge map
-docs/               README screenshots and demo GIF
-Dockerfile, docker-compose.yml, .github/workflows/tests.yml
+docs/               README screenshots, demo GIF, CALIBRATION.md, PILOT_PROTOCOL.md
+Dockerfile, docker-compose.yml, pyproject.toml (ruff, mypy, coverage), .github/workflows/tests.yml
 ```
 
-Built with Python 3.11+, Streamlit, Pydantic 2, SQLite, pdfplumber, the Anthropic SDK and pytest.
+Built with Python 3.11+, Streamlit, Pydantic 2, SQLite, pdfplumber, reportlab, the Anthropic SDK and pytest.
 
 ## Guarantees enforced in code
 
@@ -253,9 +271,44 @@ Each rule below is enforced in the code (not only in a prompt) and has a test.
 18. Access codes are stored only as salted hashes, and deleting a project deletes its codes.
 19. The review queue shows an answer only if its author consented to human review, never shows who wrote it, and a protected project needs the reviewer code (checked in `orchestrator.review_queue`, not only in the page).
 20. A follow-up question is offered only to the learner, only after the delay, only once per mission, and is always a new scenario. If it is missed, the latest evidence (and so coverage) shows it.
-21. Exported reports contain counts per decision: no names, answers or scores.
+21. Exported reports (PDF, Markdown, CSV) contain counts per decision: no names, answers or scores.
+22. Defense-simulator evidence is practice only: it is excluded from coverage, mentor eligibility, "demonstrated" lists and the scenarios of a real retest.
+23. Before pattern matching, answers are normalised (invisible characters, look-alike letters, accents, spaced-out spelling), so common tricks do not hide an answer request or an instruction to the grader.
+24. Course pointers are plain keyword overlap with the card and never invent a source: with no matching page the app says so.
 
 A few more details: a decision nobody was asked about is not counted as failed, other teammates can't see who is in a teaching session until both people accept, and grammar or language does not lower a score.
+
+## Quality and evidence
+
+Numbers below are what the repository measures today. None of them is a validation of learning outcomes.
+
+| Check | Result |
+|---|---|
+| Automated tests | 276 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
+| Lint and types | `ruff` and `mypy` run clean in CI on Python 3.11 and 3.12 |
+| Answer-request guard | 38/38 adversarial cases blocked (paraphrases, Italian/French/Spanish/German, spelling tricks, look-alike letters) |
+| Prompt-injection guard | 37/37 adversarial cases blocked (role changes, score demands, JSON, other languages, spacing tricks) |
+| False positives | 0/15 real explanations blocked (answers that merely contain words like "ignore", "score" or "grade") |
+| Contrast | 211 text samples on 5 rendered pages measured at WCAG AA (4.5:1 for normal text); the first pass found 32 faint texts, all fixed. 8 large headings (white or gradient on near-black) cannot be sampled this way; by calculation they are above 9:1 |
+| Grader calibration | offline keyword rubric: 72% exact agreement, 92% within one point, Cohen's kappa 0.60 on 40 reference answers (see below) |
+
+The adversarial cases are in `tests/adversarial_cases.py`. They found real gaps: the first version of the guards missed 23 of 38 answer requests and 18 of 37 injections; the fix is in `rubrics.py`. Pattern matching can still be beaten by a determined writer, so a human reviewer remains the backstop.
+
+**Grader calibration.** `python scripts/calibrate.py` compares the grader with reference scores for 40 synthetic answers (`data/calibration/answers.json`, report in [`docs/CALIBRATION.md`](docs/CALIBRATION.md)). Two caveats matter more than the number:
+
+- the reference scores were **drafted by the developer**, not by an independent grader: a TA should re-score them before the numbers are quoted as evidence;
+- the set is built to include hard cases (paraphrases, keyword lists), so the agreement is lower than it would be on ordinary answers. It shows where the offline keyword rubric is weak: it misses correct paraphrases (0/5) and gives a keyword list a 1 where the reference says 0. It is a stand-in for the model, which has not been calibrated; `--live` runs the same set through the model when a key is available.
+
+**Pilot.** No pilot has been run. [`docs/PILOT_PROTOCOL.md`](docs/PILOT_PROTOCOL.md) describes how to run one with 2–3 consenting teams, and `scripts/pilot_summary.py` prints the counts (never answers or scores) to report.
+
+## Accessibility
+
+- **Contrast.** Text colours were measured on the rendered pages (colour, opacity and the pixels behind it): all measurable text passes WCAG AA. Streamlit's own caption opacity had made the sidebar hints 2.6–3.0:1 before.
+- **Not colour alone.** Every status pill carries an icon shape as well as a colour (✓ ▲ ◐ ● ○ ◆); the coverage ring and verdict have text equivalents, and the 3D map has an `alt` text plus a text version under it.
+- **Keyboard.** Every focusable control shows a 3px focus outline; form fields have accessible names.
+- **Phones.** Below 700px the columns stack and the stepper wraps; no horizontal scroll on any page at 390px.
+- **Motion.** Animations are switched off for users who prefer reduced motion.
+- **Not done:** the page language attribute stays `en` when Italian is selected, and the app has not been tested with a screen reader.
 
 ## Example runs (demo mode)
 
@@ -277,10 +330,13 @@ In a project without the live model, a member's answer waits for human review. B
 ## Testing
 
 ```bash
-python -m pytest -q
+pip install -r requirements-dev.txt
+python -m pytest -q --cov    # tests and coverage
+python -m ruff check .        # lint
+python -m mypy                # types
 ```
 
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 148 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs the suite on Python 3.11 and 3.12 for every push and pull request.
+The tests run offline: the model is replaced by a deterministic fake. At the last run, 276 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
 
 ## Limitations
 
@@ -297,6 +353,10 @@ The tests run offline: the model is replaced by a deterministic fake. At the las
 - The offline keyword rubric exists only for the synthetic demo and only for English (plus a few Italian words).
 - Only the interface is translated into Italian. Some explanatory sentences from the coverage logic are English, and the report export is English.
 - Reminders appear in the app when a member opens a page; there are no emails or push notifications.
+- Sign-in uses shared codes, not accounts with email magic links; the page language attribute does not follow the interface language.
+- The defense simulator is practice: it shows a scenario the learner may meet again in a real retest, so it is not a secret question bank. The demo has two scenarios per decision.
+- Course pointers use keyword overlap, not semantic search: a page that explains the idea in other words can be missed.
+- The grader calibration reference scores were written by the developer and the set is synthetic; the live model has not been run through it.
 - We have not measured any learning results. The demo only shows how the process works.
 
 ## License

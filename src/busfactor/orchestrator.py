@@ -31,6 +31,7 @@ import re
 import shutil
 import uuid
 from collections import Counter
+from functools import lru_cache
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -56,6 +57,7 @@ STEP_BUDGET = 6
 REMINDER_DAYS = int(os.getenv("BUSFACTOR_REMINDER_DAYS", "2"))    # an accepted mission with no retest yet
 FOLLOWUP_DAYS = int(os.getenv("BUSFACTOR_FOLLOWUP_DAYS", "3"))    # spaced follow-up after a passed retest
 MAX_DECISIONS = 10
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024   # per uploaded document
 DEMO_BADGE = "DEMO DATA — synthetic"
 ACTIVE_PROJECT = "active_project"
 OWNER_TAG = "-owner-"   # legacy owner-check ids: Q-<decision>-<member>-owner-<type>
@@ -223,6 +225,7 @@ def create_project(title: str, course: str = "", files: Sequence[tuple[str, byte
                    consent_mentor=False, consent_learner=False) for i, n in enumerate(people, 1)]
     try:
         for name, content in files:
+            _check_size(name, content)
             safe = _safe_name(name)
             folder.mkdir(parents=True, exist_ok=True)
             (folder / safe).write_bytes(content)
@@ -238,6 +241,11 @@ def create_project(title: str, course: str = "", files: Sequence[tuple[str, byte
     _snapshot("baseline", pid)
     open_project(pid)
     return _proj(pid)
+
+
+def _check_size(name: str, content: bytes) -> None:
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError(f"{name} is larger than {MAX_UPLOAD_BYTES // (1024 * 1024)} MB; upload a smaller file.")
 
 
 def _readable(path: Path) -> None:
@@ -894,6 +902,13 @@ def export_team_report(project_id: Optional[str] = None, now: Optional[datetime]
     return "\n".join(lines)
 
 
+def _csv_safe(value: object) -> object:
+    """A spreadsheet runs a cell that starts with = + - @ as a formula: prefix such text with an apostrophe."""
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    return value
+
+
 def export_decisions_csv(project_id: Optional[str] = None) -> str:
     """One row per decision: status and number of explainers, never who they are."""
     pid = _pid(project_id)
@@ -905,8 +920,9 @@ def export_decisions_csv(project_id: Optional[str] = None) -> str:
     for c in report.per_decision:
         card = cards[c.decision_id]
         ref = card.source_refs[0] if card.source_refs else None
-        writer.writerow([c.decision_id.rsplit("-", 1)[-1], card.title, card.review_status.value, c.status,
-                         len(c.demonstrated_by), ref.file if ref else "", ref.page if ref else ""])
+        writer.writerow([_csv_safe(v) for v in (
+            c.decision_id.rsplit("-", 1)[-1], card.title, card.review_status.value, c.status,
+            len(c.demonstrated_by), ref.file if ref else "", ref.page if ref else "")])
     return out.getvalue()
 
 
@@ -1012,6 +1028,7 @@ def add_course_material(name: str, content: bytes, project_id: Optional[str] = N
     pid = _pid(project_id)
     if pid == DEMO_PROJECT_ID:
         raise ValueError(DEMO_IS_FIXED)
+    _check_size(name, content)
     safe = _safe_name(name)
     folder = UPLOADS / pid / COURSE_DIR
     folder.mkdir(parents=True, exist_ok=True)
@@ -1028,6 +1045,12 @@ def add_course_material(name: str, content: bytes, project_id: Optional[str] = N
         db.set_setting(_course_key(pid), json.dumps([*names, safe]))
     db.log("agent", "add_course_material", {"file": safe}, audience=db.TEAM, project_id=pid)
     return safe
+
+
+@lru_cache(maxsize=32)
+def _course_pages(path: str, mtime_ns: int) -> list[tuple[int, str]]:
+    """Pages of a course file, read once per file version (the Teach page asks on every rerun)."""
+    return load_pages(path)
 
 
 def _terms(text: str) -> set[str]:
@@ -1051,7 +1074,7 @@ def find_course_pointers(decision_id: str, limit: int = 3) -> list[dict]:
         path = UPLOADS / card.project_id / COURSE_DIR / name
         if not path.is_file():
             continue
-        for page, text in load_pages(path):
+        for page, text in _course_pages(str(path), path.stat().st_mtime_ns):
             hits = query & _terms(text)
             if len(hits) >= 3 and len(hits) / len(query) >= 0.25:
                 sentences = re.split(r"(?<=[.!?])\s+|\n+", text)
@@ -1071,6 +1094,7 @@ def export_team_report_pdf(project_id: Optional[str] = None, now: Optional[datet
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from xml.sax.saxutils import escape as esc_markup
 
     pid = _pid(project_id)
     p, report, snaps = _proj(pid), team_coverage(pid), coverage_snapshots(pid)
@@ -1099,7 +1123,7 @@ def export_team_report_pdf(project_id: Optional[str] = None, now: Optional[datet
         card = cards[c.decision_id]
         unconfirmed = card.review_status != ReviewStatus.verified
         status = "Not confirmed (not counted)" if unconfirmed else STATUS_WORDS[c.status].split(" (")[0]
-        rows.append([c.decision_id.rsplit("-", 1)[-1], Paragraph(card.title, styles["BodyText"]), status,
+        rows.append([c.decision_id.rsplit("-", 1)[-1], Paragraph(esc_markup(card.title), styles["BodyText"]), status,
                      str(len(c.demonstrated_by))])
         marks.append(("TEXTCOLOR", (2, i), (2, i), colors.grey if unconfirmed else colour[c.status]))
     table = Table(rows, colWidths=[14 * mm, 90 * mm, 50 * mm, 26 * mm], repeatRows=1)
@@ -1115,13 +1139,13 @@ def export_team_report_pdf(project_id: Optional[str] = None, now: Optional[datet
                             bottomMargin=16 * mm, title=f"BusFactor team report: {p.title}", author="BusFactor")
     demo_note = "  ·  DEMO DATA, synthetic" if pid == DEMO_PROJECT_ID else ""
     doc.build([
-        Paragraph(f"BusFactor team report: {p.title}", styles["Title"]),
-        Paragraph(f"{p.course or 'No course given'}  ·  generated {stamp}{demo_note}", styles["Normal"]),
+        Paragraph(f"BusFactor team report: {esc_markup(p.title)}", styles["Title"]),
+        Paragraph(esc_markup(f"{p.course or 'No course given'}  ·  generated {stamp}{demo_note}"), styles["Normal"]),
         Spacer(1, 8 * mm), Paragraph("Decision coverage", styles["Heading2"]), chart,
         Paragraph(f"Single points of failure: {len(report.spof_decision_ids)}", styles["Normal"]),
         Spacer(1, 5 * mm), Paragraph("Decisions", styles["Heading2"]), table,
         Spacer(1, 5 * mm), Paragraph("Teaching missions", styles["Heading2"]),
-        Paragraph(mission_line, styles["Normal"]), Spacer(1, 6 * mm),
+        Paragraph(esc_markup(mission_line), styles["Normal"]), Spacer(1, 6 * mm),
         Paragraph("Decision Coverage = critical decisions that 2 or more members can explain, divided by critical "
                   "decisions that have been assessed. It is a prototype indicator, not a validated metric. Scores are "
                   "practice feedback and never appear in this report; \"not assessed\" is never counted as failed.",
