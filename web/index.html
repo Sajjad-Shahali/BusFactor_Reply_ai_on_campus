@@ -12,28 +12,29 @@
 <style>
 /* Layout: one calm column; the hero pairs the thesis with a live 3D map of who can explain which decision. */
 :root {
-  --bg: #F6F7F9;
+  --bg: #F7F4EF;
   --surface: #FFFFFF;
-  --fg: #141821;
-  --muted: #5D6472;
-  --line: #E0E4EB;
-  --accent: #2F4FD8;
+  --fg: #1A1510;
+  --muted: #6A5F52;
+  --line: #E3DCD0;
+  --accent: #8A6516;
+  --on-accent: #FFFFFF;
   --risk: #D6453B;
   --ok: #1E9A62;
-  --idle: #A3AAB7;
+  --idle: #A89E90;
   --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0E1116; --surface: #151922; --fg: #E7E9EE; --muted: #98A0AE; --line: #252B36;
-    --accent: #7D93FF; --risk: #FF6B5F; --ok: #3FCB8A; --idle: #5B6372; color-scheme: dark;
+    --bg: #120E0B; --surface: #1C1510; --fg: #F3EEE6; --muted: #B3A899; --line: #3A2D22;
+    --accent: #E8C468; --on-accent: #120E0B; --risk: #FF6B5F; --ok: #3FCB8A; --idle: #6B6055; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0E1116; --surface: #151922; --fg: #E7E9EE; --muted: #98A0AE; --line: #252B36;
-  --accent: #7D93FF; --risk: #FF6B5F; --ok: #3FCB8A; --idle: #5B6372; color-scheme: dark;
+  --bg: #120E0B; --surface: #1C1510; --fg: #F3EEE6; --muted: #B3A899; --line: #3A2D22;
+  --accent: #E8C468; --on-accent: #120E0B; --risk: #FF6B5F; --ok: #3FCB8A; --idle: #6B6055; color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -140,7 +141,7 @@ code { font: 500 0.82rem/1 var(--font-mono); color: var(--fg); background: var(-
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 32px; }
 .btn { display: inline-flex; align-items: center; gap: 8px; font: 600 0.95rem/1 var(--font-body); text-decoration: none;
        border-radius: 10px; padding: 13px 18px; border: 1px solid var(--line); color: var(--fg); background: var(--surface); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn:hover { filter: brightness(1.05); }
 </style>
 <style>body{margin:0}</style>

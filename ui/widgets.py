@@ -340,3 +340,78 @@ def humanize_action(action: str) -> str:
     if text is None:
         text = action.replace(".", " \u2192 ").replace("_", " ").capitalize() + "."
     return t(text)
+<<<<<<< Updated upstream
+=======
+
+
+
+# ------------------------------------------------------------------ connect a model (this session only)
+SOURCE_TEXT = {"model": "Written by the connected model", "demo_bank": "From the synthetic demo bank",
+               "template": "Fixed template (no model connected)"}
+
+
+def source_chip(question) -> str:
+    """Who wrote a question, shown next to it so nobody mistakes a template for model output."""
+    return f'<span class="bf-muted">{esc(t(SOURCE_TEXT.get(question.source, SOURCE_TEXT["template"])))}</span>'
+
+
+def _connect_model() -> None:
+    """Button callback: test the typed connection and, if it works, keep it for this session only."""
+    state = st.session_state
+    provider = state.get("llm-provider", "anthropic")
+    cfg = llm_provider.Config(
+        provider=provider, api_key=(state.get("llm-key") or "").strip(),
+        model=(state.get("llm-model") or "").strip() or llm_provider.DEFAULT_MODELS[provider],
+        base_url=(state.get("llm-base") or "").strip() if provider == "openai" else "")
+    ok, message = llm_provider.test_connection(cfg)
+    state["llm-msg"] = (ok, message)
+    if ok:
+        state["llm"] = cfg
+        state["llm-key"] = ""          # the typed key does not stay in the page's input
+
+
+def _disconnect_model() -> None:
+    st.session_state.pop("llm", None)
+    st.session_state["llm-key"] = ""
+    st.session_state.pop("llm-msg", None)
+
+
+def model_panel() -> None:
+    """Connect Claude, OpenAI/Codex or a local OpenAI-compatible model for THIS browser session.
+
+    The key lives in this session's memory only (not the database, logs or exports) and is gone on Disconnect.
+    """
+    cfg = llm_provider.get_session_config()
+    title = t("Model: connected") if cfg else t("Connect a model")
+    with st.expander(title, expanded=False):
+        st.caption(t(llm_provider.describe_connection()) if not cfg else
+                   t("Model connected (this session only): {m}").format(m=cfg.label))
+        if cfg:
+            st.button(t("Disconnect"), key="llm-disconnect", on_click=_disconnect_model)
+            return
+        env = llm_provider.env_config()
+        if env:
+            st.caption(t("The server already has a model configured: {m}").format(m=env.label))
+        options = llm_provider.available_providers()
+        st.selectbox(t("Provider"), list(options), format_func=lambda p: options[p], key="llm-provider")
+        provider = st.session_state.get("llm-provider", "anthropic")
+        if provider in llm_provider.CLI_PROVIDERS:
+            st.caption(t("Runs the tool already installed and logged in on this computer: no key is typed here. Use it "
+                         "only on your own computer, never on a shared server."))
+            if provider == "codex-cli":
+                st.warning(t("Codex runs in a read-only sandbox, but it can still read files on this computer."))
+        else:
+            st.text_input(t("API key"), type="password", key="llm-key",
+                          help=t("Kept in this session's memory only: not saved to the database, the logs or any export."))
+        st.text_input(t("Model name"), key="llm-model", placeholder=llm_provider.DEFAULT_MODELS[provider] or t("(the tool's default)"))
+        if provider == "openai":
+            st.text_input(t("Base URL"), key="llm-base", placeholder=llm_provider.DEFAULT_BASE_URL,
+                          help=t("Leave empty for OpenAI. For a model on this computer use e.g. http://localhost:11434/v1 "
+                                 "(Ollama); no key is needed then."))
+        agreed = st.checkbox(t("I understand that the project text and my team's answers are sent to this provider "
+                               "to write questions and score answers."), key="llm-consent")
+        st.button(t("Connect and test"), key="llm-connect", type="primary", disabled=not agreed, on_click=_connect_model)
+        result = st.session_state.get("llm-msg")
+        if result and not result[0]:
+            st.error(t(result[1]))
+>>>>>>> Stashed changes
