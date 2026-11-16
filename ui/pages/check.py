@@ -26,8 +26,8 @@ def render() -> None:
               "grammar and language never lower the score."), icon="🔒")
     me = cx.members[cx.viewer]
     with st.expander(t("My consent"), expanded=not me.consent_assessment):
-        st.caption("Only you can change these, and you can withdraw at any time. Withdrawing removes your answers "
-                   "from the team's coverage." + (" In the demo, consent is synthetic." if orc.is_demo_project() else ""))
+        st.caption(t("Only you can change these, and you can withdraw at any time. Withdrawing removes your answers "
+                     "from the team's coverage.") + (" " + t("In the demo, consent is synthetic.") if orc.is_demo_project() else ""))
         c_assess = st.checkbox(t("I agree to be assessed (private questions and retests)"),
                                value=me.consent_assessment, key="c-assess")
         c_mentor = st.checkbox(t("I am willing to mentor a teammate"), value=me.consent_mentor, key="c-mentor")
@@ -44,18 +44,19 @@ def render() -> None:
 
     with st.container(border=True):
         others = [d for d in cx.cards.values() if d.owner_id != cx.viewer]
-        choice = st.multiselect("Choose up to 2 decisions to be checked on",
+        choice = st.multiselect(t("Choose up to 2 decisions to be checked on"),
                                 [d.id for d in others], default=orc.suggest_check_decisions(cx.viewer),
                                 max_selections=2, format_func=lambda i: f"{dlabel(i)} · {cx.cards[i].title}")
         if st.button(t("Get my questions"), type="primary"):
             made = orc.start_check(cx.viewer, choice)
-            st.success(f"{len(made)} new question(s) below." if made else "No new questions for these decisions.")
+            st.success(t("{n} new question(s) below.").format(n=len(made)) if made
+                       else t("No new questions for these decisions."))
 
     owned = orc.owner_check_decisions(cx.viewer)
     if owned:   # secondary task: it sits below the main one
         with st.expander(t("Show you can explain your own decision")):
-            show('<div class="bf-muted">Owning a decision is not proof you can defend it. One independent '
-                 'question, no hints: only a full answer lets you mentor a teammate on it.</div>')
+            show('<div class="bf-muted">' + esc(t("Owning a decision is not proof you can defend it. One independent "
+                                              "question, no hints: only a full answer lets you mentor a teammate on it.")) + '</div>')
             pick = st.selectbox("Decision", owned, format_func=lambda i: f"{dlabel(i)} · {cx.cards[i].title}", key="own-pick")
             if st.button(t("Start my question"), key="own-start"):
                 try:
@@ -97,7 +98,7 @@ def render() -> None:
             show(f'{pill(label, kind)} <span class="bf-muted">{esc(dlabel(q.decision_id))} · '
                  f'{esc(q.question_type.value.replace("_", " "))}</span>')
             show(f'<div class="bf-title" style="margin:0.4rem 0">{esc(q.prompt)}</div>')
-            show(f'<div class="bf-muted">Your answer: {esc(ev.answer)}</div>')
-            st.markdown(f"Result: {ev.feedback}")
+            show(f'<div class="bf-muted">{esc(t("Your answer"))}: {esc(ev.answer)}</div>')
+            st.markdown(f"{t('Result')}: {ev.feedback}")
 
     page_nav(2)

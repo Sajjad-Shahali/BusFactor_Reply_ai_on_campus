@@ -40,7 +40,7 @@ def need_viewer() -> None:
         if cx.locked:
             st.info(t("Enter your access code in the sidebar to continue."))
         else:
-            st.info("This project has no members yet. Add the team in **1. Project Setup** first.")
+            st.info(t("This project has no members yet. Add the team in **1. Project Setup** first."))
         st.stop()
 
 
@@ -150,7 +150,7 @@ def ring(num: int, den: int, base_num: int) -> str:
 
 def win(title: str, text: str) -> str:
     return (f'<div class="bf-win"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/>'
-            f'<path d="M15 27l7 7 15-16"/></svg><div><b>{esc(title)}</b><span>{esc(text)}</span></div></div>')
+            f'<path d="M15 27l7 7 15-16"/></svg><div><b>{esc(t(title))}</b><span>{esc(text)}</span></div></div>')
 
 
 def flow(m) -> str:

@@ -78,7 +78,7 @@ IT = {
     "Setup": "Impostazione", "Check": "Verifica", "Coverage": "Copertura", "Teach": "Insegna", "Retest": "Nuovo test",
     "Evidence": "Evidenze",
     "not measurable": "non misurabile", "covered": "coperto",
-    "{a} of {b} confirmed decisions have been assessed": "{a} decisioni confermate su {b} sono state valutate",
+    "{a} of {b} confirmed decisions have been assessed": "{a} su {b} decisioni confermate sono state valutate",
     " · {n} not confirmed yet, so not counted": " · {n} non ancora confermate, quindi non contate",
     # status pills
     "Covered": "Coperta", "Single point of failure": "Punto singolo di fallimento",
@@ -431,6 +431,106 @@ IT.update({
         "Una risposta del simulatore rivolta al valutatore non è stata valutata.",
     "A reviewer scored an answer.": "Un revisore ha valutato una risposta.",
     "Team coverage was recorded.": "La copertura del team è stata registrata.",
+})
+
+
+# ---- remaining interface strings
+IT.update({
+    "{n} new question(s) below.": "{n} nuova/e domanda/e qui sotto.",
+    "No new questions for these decisions.": "Nessuna nuova domanda per queste decisioni.",
+    "Choose up to 2 decisions to be checked on": "Scegli fino a 2 decisioni su cui essere verificato",
+    "Why": "Perché", "What If": "E se", "Transfer": "Trasferimento",
+    "Only you can change these, and you can withdraw at any time. Withdrawing removes your answers from the team's "
+    "coverage.":
+        "Solo tu puoi modificarli e puoi ritirarti in qualsiasi momento. Ritirarti toglie le tue risposte dalla "
+        "copertura del team.",
+    "In the demo, consent is synthetic.": "Nella demo il consenso è sintetico.",
+    "Owning a decision is not proof you can defend it. One independent question, no hints: only a full answer lets "
+    "you mentor a teammate on it.":
+        "Essere responsabili di una decisione non prova che sai difenderla. Una domanda indipendente, senza aiuti: "
+        "solo una risposta completa ti permette di fare da mentore a un compagno.",
+    "Both people must accept the mission before the retest.": "Entrambe le persone devono accettare la missione prima del nuovo test.",
+    "You have not agreed to be assessed, so the retest is not available.":
+        "Non hai accettato di essere valutato, quindi il nuovo test non è disponibile.",
+    "Your answer to the last question was recorded": "La tua risposta all'ultima domanda è stata registrata",
+    "New situation": "Nuova situazione",
+    "Mission status: **{status}** · team coverage now {cov}": "Stato della missione: **{status}** · copertura del team ora {cov}",
+    "You explained {d} on a new question, with no hints. Team coverage went up.":
+        "Hai spiegato {d} su una nuova domanda, senza aiuti. La copertura del team è aumentata.",
+    "New question passed. Team coverage is now {cov}.": "Nuova domanda superata. La copertura del team è ora {cov}.",
+    "This project has no members yet. Add the team in **1. Project Setup** first.":
+        "Questo progetto non ha ancora membri. Aggiungi prima il team in **1. Impostazione progetto**.",
+    "The people in this mission are shown only to them until both accept.":
+        "Le persone di questa missione sono mostrate solo a loro finché entrambi non accettano.",
+    "Shared project steps, plus your own private steps. Other members' checks, consents and retests are never shown "
+    "here, and answers and scores are never written to the log.":
+        "Passaggi condivisi del progetto più i tuoi passaggi privati. Verifiche, consensi e nuovi test degli altri "
+        "membri non sono mai mostrati qui, e risposte e punteggi non vengono mai scritti nel registro.",
+    "Scores are practice feedback, not grades. A score from the model can be wrong.":
+        "I punteggi sono feedback di allenamento, non voti. Un punteggio del modello può essere sbagliato.",
+    "One correct answer shows someone explained one decision on one day, not that they'll remember it.":
+        "Una risposta corretta mostra che qualcuno ha spiegato una decisione un giorno, non che la ricorderà.",
+    "Decision Coverage is a prototype indicator, not a validated metric.":
+        "La copertura delle decisioni è un indicatore di prototipo, non una metrica validata.",
+    "In the synthetic demo, answers are scored offline with a keyword rubric on made-up data, as a stand-in for the "
+    "model. A score of 2 also needs explained reasoning and the scenario's own conclusion.":
+        "Nella demo sintetica le risposte sono valutate offline con una rubrica a parole chiave su dati inventati, "
+        "al posto del modello. Un punteggio di 2 richiede anche un ragionamento spiegato e la conclusione propria "
+        "dello scenario.",
+    "In your own projects without the live model, nothing is scored automatically: answers wait for human review. "
+    "With the model, unsure or inconsistent grades also go to human review.":
+        "Nei tuoi progetti senza il modello reale nulla viene valutato automaticamente: le risposte aspettano la "
+        "revisione umana. Con il modello, anche i voti incerti o incoerenti vanno alla revisione umana.",
+    "Answers that try to instruct the grader are never scored. The app cannot stop anyone from using an outside AI "
+    "tool.":
+        "Le risposte che cercano di istruire il valutatore non vengono mai valutate. L'app non può impedire a nessuno "
+        "di usare uno strumento di IA esterno.",
+    "No source means no assessment. A decision is assessed only after a member confirms it.":
+        "Senza fonte non c'è valutazione. Una decisione viene valutata solo dopo la conferma di un membro.",
+    "If nobody can explain a decision, the app points to the course material or the TA.":
+        "Se nessuno sa spiegare una decisione, l'app indica il materiale del corso o il tutor.",
+    "In a small team even totals can identify people, so the team view shows only counts per decision.":
+        "In un piccolo team anche i totali possono identificare le persone, quindi la vista del team mostra solo "
+        "conteggi per decisione.",
+    "No course given": "Nessun corso indicato", "source": "fonte", "no document yet": "ancora nessun documento",
+    "Next step": "Prossimo passo",
+    "Add the team members below. Each member then opts in to assessment on the Private Check page.":
+        "Aggiungi i membri del team qui sotto. Ogni membro accetta poi la valutazione nella pagina Verifica privata.",
+    "Add the project's key decisions: by hand (each quote is checked) or with the live model.":
+        "Aggiungi le decisioni chiave del progetto: a mano (ogni citazione viene controllata) o con il modello reale.",
+    "Decisions are confirmed. Members can now take private checks and owners their owner checks.":
+        "Le decisioni sono confermate. I membri possono ora fare le verifiche private e i responsabili la loro verifica.",
+    "A new project is added next to the existing ones; nothing is deleted. Members start with every consent off. Only "
+    "upload documents you are allowed to share.":
+        "Un nuovo progetto viene aggiunto accanto a quelli esistenti; nulla viene eliminato. I membri iniziano con "
+        "ogni consenso disattivato. Carica solo documenti che puoi condividere.",
+    "No members yet.": "Ancora nessun membro.",
+    "Each member opts in for themselves on the Private Check page.":
+        "Ogni membro accetta per sé nella pagina Verifica privata.",
+    "This project has no document, so no decision can be source-checked. Start a new project with its report.":
+        "Questo progetto non ha documenti, quindi nessuna decisione può essere controllata sulla fonte. Avvia un "
+        "nuovo progetto con il suo report.",
+    "Propose decisions with the live model": "Proponi decisioni con il modello reale",
+    "Copy the quote word for word from the document; it is checked against that page.":
+        "Copia la citazione parola per parola dal documento; viene controllata in quella pagina.",
+    "Rationale (why, in the team's words)": "Motivazione (perché, con le parole del team)",
+    "Rejected alternatives (comma-separated)": "Alternative scartate (separate da virgola)",
+    "Document": "Documento", "Page": "Pagina", "Exact quote from that page": "Citazione esatta da quella pagina",
+    "Added, but the quote was not found on that page, so it can never be assessed. Check the page number and the "
+    "exact wording.":
+        "Aggiunta, ma la citazione non è stata trovata in quella pagina, quindi non potrà mai essere valutata. "
+        "Controlla il numero di pagina e la formulazione esatta.",
+    "No verified source: the quote is not on the cited page, so this decision is never assessed.":
+        "Nessuna fonte verificata: la citazione non è nella pagina indicata, quindi questa decisione non viene mai "
+        "valutata.",
+    "Proposed: not assessed until a member checks the quote and confirms it.":
+        "Proposta: non valutata finché un membro non controlla la citazione e la conferma.",
+    "Add members first: only a member can confirm a decision.":
+        "Aggiungi prima i membri: solo un membro può confermare una decisione.",
+    "Deletes this project's decisions, members, answers, missions and log. It cannot be undone. Other projects and "
+    "the demo are not affected.":
+        "Elimina decisioni, membri, risposte, missioni e registro di questo progetto. Non si può annullare. Gli altri "
+        "progetti e la demo non sono toccati.",
 })
 
 # sentences built by coverage.py and missions.py: matched by shape, then translated with the same placeholders

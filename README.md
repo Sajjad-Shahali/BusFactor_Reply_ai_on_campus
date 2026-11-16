@@ -68,11 +68,21 @@ Project report ──► Decision cards ──► Private checks ──► Cover
 1. **Capture.** Read the project file and pull out 5 key decisions. Each one has a quote from the file, and the code checks that the quote is really on the page it cites. A person then confirms the cards.
 2. **Private check.** Each member answers a "why" and a "what if" question about decisions they did not make. Answers get 0, 1 or 2 and only the member can see them.
 3. **Detect silos.** Decision coverage is the number of decisions that at least 2 members can explain, divided by the number of decisions that have been assessed. A decision only one person can explain is a *single point of failure*.
-4. **Peer-teaching mission.** For those decisions, BusFactor suggests a teaching session: someone who scored 2 teaches someone who didn't, only if both agree. If nobody in the team can explain it, it points to the course material or the TA instead of inventing a mentor. If the session does not happen, both people get a reminder.
+4. **Peer-teaching mission.** For those decisions, BusFactor suggests a teaching session: someone who scored 2 teaches someone who didn't, only if both agree. If nobody in the team can explain it, it points to the course material or the TA instead of inventing a mentor. The pair ticks off a checklist (with conversation starters) and marks the session done; the retest opens after that. If the session does not happen, both people get a reminder.
 5. **Independent retest.** The learner gets a new question, with no hints. If they score 2, coverage goes up.
 6. **Follow-up.** A few days later the learner gets one more new question, because one correct answer on one day does not prove it stuck.
 
 In the demo, coverage starts at **1/5**. Member B teaches Member D why the team used F1 instead of accuracy (D03), Member D passes the new question, and coverage goes to **2/5**.
+
+**Plain words in the app.** The interface avoids jargon and keeps the technical term in a tooltip:
+
+| In the app | Means |
+|---|---|
+| *Only 1 can explain it* | a single point of failure: one member has shown they can explain the decision |
+| *2+ can explain it* | covered: at least two members have |
+| *Nobody can explain it yet* | members were checked and nobody has shown it yet |
+| *Solo question · no hints* | an independent check, answered alone |
+| *Confirmed: can explain it* | the retest was passed on a new question |
 
 ## Features
 
@@ -80,7 +90,7 @@ In the demo, coverage starts at **1/5**. Member B teaches Member D why the team 
 |---|---|
 | Source-checked decision cards | Every card quotes the document; the code verifies the quote is on the cited page. |
 | Private, consent-based checks | Nobody is assessed without opting in. Answers are visible only to their author. |
-| Coverage map and single points of failure | Counts only: never names or scores on the team page. |
+| Coverage map | Shows which decisions only 1 person can explain (single points of failure). Counts only: never names or scores on the team page. |
 | Consent-gated peer-teaching missions | A mentor is chosen only if they demonstrated the decision and agreed. No fake mentors. |
 | Independent retest | A new, different question with no hints; asking for the answer is refused in code. |
 | Spaced follow-up and reminders | A nudge when an accepted mission sits idle, and a second new question after a few days. |
@@ -90,7 +100,11 @@ In the demo, coverage starts at **1/5**. Member B teaches Member D why the team 
 | Defense simulator | A mock oral: random new questions on any decision, no hints. Practice only: never counted in coverage. |
 | Course-material pointers | When nobody can explain a decision, the app shows the page of your course files that talks about it. |
 | Hardened guards | Answer-request and prompt-injection detection survives paraphrases, other languages and spelling tricks (see [Quality and evidence](#quality-and-evidence)). |
-| Accessible by design | Measured contrast, keyboard focus, status icons, phone layout (see [Accessibility](#accessibility)). |
+| Accessible by design | Measured contrast, keyboard focus, status icons, phone layout, larger-text switch (see [Accessibility](#accessibility)). |
+| Your next step | Every page opens with the one thing this member should do now, with a button that goes there; Back/Next at the bottom. |
+| Teaching-session checklist | The pair ticks off the four steps, gets conversation starters built from the confirmed card, and marks the session done to open the retest. |
+| Drafts and sign-in | Typed answers survive moving to another page; an optional, expiring "keep me signed in" token; Sign out. |
+| Who can see what | One panel on the main pages says exactly who sees answers, coverage, sessions, reviews and the log. |
 | English and Italian interface | Switch in the sidebar; the page you are on and your identity are kept. |
 | Offline demo mode | Runs with no API key on synthetic data. |
 | Docker image | `docker compose up` and open <http://localhost:8501>. |
@@ -107,6 +121,7 @@ The loop above, as the app shows it. All screenshots use the synthetic demo data
 | **After the retest**: coverage 2/5, one single point of failure fewer<br>![Coverage after the retest](docs/screenshots/08_coverage_after_retest.png) | **Italian interface**: same page, same numbers<br>![Italian interface](docs/screenshots/09_italian_coverage.png) |
 | **Human review queue**: answers without names, scored by a reviewer<br>![Review queue](docs/screenshots/10_review_queue.png) | **Defense simulator**: a mock oral, practice only<br>![Defense simulator](docs/screenshots/12_defense_simulator.png) |
 | **Empty states** say what to do next<br>![Empty state](docs/screenshots/13_empty_state.png) | **On a phone**: the verdict first, stats stacked<br><img src="docs/screenshots/11_mobile_coverage.png" alt="Team Coverage on a phone" width="260"> |
+| **Teaching session**: checklist and conversation starters<br>![Teaching session](docs/screenshots/14_teaching_session.png) | **The retest follows the session**: until it is held, the page says so<br>![Retest gate](docs/screenshots/15_retest_gate.png) |
 
 There is also a static landing page, `web/index.html`, with a 3D knowledge map (`web/knowledge_map.html`). Open it in a browser; "Open the demo" links to the Streamlit app.
 
@@ -188,6 +203,7 @@ The demo is a fictional team, so it has no sign-in: "Who are you?" is a dropdown
 - Every member gets a personal code (for example `K7QM-2XPD`). The app shows the codes once, right after the project is created; only a salted PBKDF2 hash is stored. A member's answers and feedback appear only after their code is entered. Wrong guesses are throttled per browser session.
 - The project also gets one **reviewer code**. It opens the **Review queue** (Evidence & Limits). Without the live model, or when the model is unsure, answers are not scored automatically; the reviewer scores them 0, 1 or 2 with an optional note.
 - A reviewer sees only answers from members who ticked *"Allow a human reviewer to read my answers…"*, and never their names. The log records that a review happened, never the answer or the score. A reviewed retest updates the mission and coverage exactly like an automatic score.
+- **Keep me signed in** (optional, per member) adds a signed token to the page link for 7 days so the code is not retyped on a refresh. Anyone who has that link can open that member's answers until it expires, so it must not be shared; **Sign out** removes it. Tokens are bound to one member and signed with a server secret.
 - Projects created without codes (for example by script) keep the dropdown. **Project Setup → Access codes** turns them on, or issues new codes (which signs everyone out).
 
 ## Interface language
@@ -284,12 +300,12 @@ Numbers below are what the repository measures today. None of them is a validati
 
 | Check | Result |
 |---|---|
-| Automated tests | 276 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
+| Automated tests | 303 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
 | Lint and types | `ruff` and `mypy` run clean in CI on Python 3.11 and 3.12 |
 | Answer-request guard | 38/38 adversarial cases blocked (paraphrases, Italian/French/Spanish/German, spelling tricks, look-alike letters) |
 | Prompt-injection guard | 37/37 adversarial cases blocked (role changes, score demands, JSON, other languages, spacing tricks) |
 | False positives | 0/15 real explanations blocked (answers that merely contain words like "ignore", "score" or "grade") |
-| Contrast | 211 text samples on 5 rendered pages measured at WCAG AA (4.5:1 for normal text); the first pass found 32 faint texts, all fixed. 8 large headings (white or gradient on near-black) cannot be sampled this way; by calculation they are above 9:1 |
+| Contrast | 236 text samples on 5 rendered pages measured at WCAG AA (4.5:1 for normal text): none fail. The first pass had found 32 faint texts, all fixed. Large white or gradient headings cannot be sampled this way; by calculation they are above 9:1 |
 | Grader calibration | offline keyword rubric: 72% exact agreement, 92% within one point, Cohen's kappa 0.60 on 40 reference answers (see below) |
 
 The adversarial cases are in `tests/adversarial_cases.py`. They found real gaps: the first version of the guards missed 23 of 38 answer requests and 18 of 37 injections; the fix is in `rubrics.py`. Pattern matching can still be beaten by a determined writer, so a human reviewer remains the backstop.
@@ -306,9 +322,13 @@ The adversarial cases are in `tests/adversarial_cases.py`. They found real gaps:
 - **Contrast.** Text colours were measured on the rendered pages (colour, opacity and the pixels behind it): all measurable text passes WCAG AA. Streamlit's own caption opacity had made the sidebar hints 2.6–3.0:1 before.
 - **Not colour alone.** Every status pill carries an icon shape as well as a colour (✓ ▲ ◐ ● ○ ◆); the coverage ring and verdict have text equivalents, and the 3D map has an `alt` text plus a text version under it.
 - **Keyboard.** Every focusable control shows a 3px focus outline; form fields have accessible names.
+- **Guidance.** The next-step card and Back/Next buttons mean the stepper is a progress display, not hidden navigation; on a phone, where the sidebar is hidden, they are the way on.
+- **Text size.** A "Larger text" switch in the sidebar scales the text by about 18% (small print is also at least 12px by default); browser zoom works too.
+- **Plain language.** Jargon is replaced with plain words and a tooltip; the action log reads as sentences, with the technical view behind a switch.
+- **No lost work.** Answers are kept as drafts while you move around, and long model calls show a spinner.
 - **Phones.** Below 700px the columns stack and the stepper wraps; no horizontal scroll on any page at 390px.
 - **Motion.** Animations are switched off for users who prefer reduced motion.
-- **Not done:** the page language attribute stays `en` when Italian is selected, and the app has not been tested with a screen reader.
+- **Not done:** a light theme (Streamlit's own widgets cannot change theme at runtime, so a CSS-only light mode would look inconsistent; use browser zoom or the larger-text switch instead), the page language attribute stays `en` when Italian is selected, and the app has not been tested with a screen reader or with real users. A heuristic review of the screens found 14 issues; all are addressed, but they are expert findings, not user-test results.
 
 ## Example runs (demo mode)
 
@@ -336,7 +356,7 @@ python -m ruff check .        # lint
 python -m mypy                # types
 ```
 
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 276 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
+The tests run offline: the model is replaced by a deterministic fake. At the last run, 303 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
 
 ## Limitations
 
@@ -353,6 +373,8 @@ The tests run offline: the model is replaced by a deterministic fake. At the las
 - The offline keyword rubric exists only for the synthetic demo and only for English (plus a few Italian words).
 - Only the interface is translated into Italian. Some explanatory sentences from the coverage logic are English, and the report export is English.
 - Reminders appear in the app when a member opens a page; there are no emails or push notifications.
+- The retest follows the teaching session in the app (the page asks for the session first), but this is an interface step, not a hard rule in the backend, and a learner can tick "We already did the session".
+- Drafts live in the browser session: closing the tab loses them.
 - Sign-in uses shared codes, not accounts with email magic links; the page language attribute does not follow the interface language.
 - The defense simulator is practice: it shows a scenario the learner may meet again in a real retest, so it is not a secret question bank. The demo has two scenarios per decision.
 - Course pointers use keyword overlap, not semantic search: a page that explains the idea in other words can be missed.

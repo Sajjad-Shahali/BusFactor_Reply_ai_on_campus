@@ -29,8 +29,8 @@ def session_block(m, viewer: str) -> None:
     for i, step in enumerate(m.steps):
         st.checkbox(step, value=i in done, key=f"step-{m.id}-{i}", on_change=_tick, args=(m.id, i, viewer))
     with st.expander(t("Conversation starters")):
-        for point in orc.session_talking_points(m.id):
-            st.markdown(f"- {point}")
+        # card text is team-written: show it as escaped HTML, not as markdown (no links or images)
+        show("<ul>" + "".join(f"<li>{esc(point)}</li>" for point in orc.session_talking_points(m.id)) + "</ul>")
     if m.session_done:
         st.success(t("Session held. The learner can take the retest now."))
         if viewer == m.learner_id:
@@ -80,7 +80,7 @@ def render() -> None:
                              f'{esc(hit["file"])} · {esc(t("page"))} {hit["page"]}</span></div>')
                 continue
             if not (involved or public):
-                show('<div class="bf-muted">The people in this mission are shown only to them until both accept.</div>')
+                show('<div class="bf-muted">' + esc(t("The people in this mission are shown only to them until both accept.")) + '</div>')
                 continue
 
             show(flow(m))

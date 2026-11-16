@@ -25,8 +25,8 @@ def render() -> None:
     page_header(1, p.title if p else "Project Setup",
                 "The key decisions of the project. Each one is linked to the exact page it comes from.")
     if p:
-        docs = ", ".join(p.source_files) or "no document yet"
-        show(f'<div class="bf-muted">{esc(p.course or "No course given")} · source: {esc(docs)}</div>')
+        docs = ", ".join(p.source_files) or t("no document yet")
+        show(f'<div class="bf-muted">{esc(p.course or t("No course given"))} · {esc(t("source"))}: {esc(docs)}</div>')
 
     by_status = {s: [d for d in cx.cards.values() if d.review_status == s] for s in ReviewStatus}
     if not cx.members:
@@ -38,12 +38,12 @@ def render() -> None:
                      "choose the owner, confirm. Nothing is assessed before it is confirmed.")
     else:
         next_step = "Decisions are confirmed. Members can now take private checks and owners their owner checks."
-    st.info(f"**Next step:** {next_step}")
+    st.info(f"**{t('Next step')}:** {t(next_step)}")
 
     show_issued_codes()
     with st.expander(t("Start a new project")):
-        st.caption("A new project is added next to the existing ones; nothing is deleted. Members start with "
-                   "every consent off. Only upload documents you are allowed to share.")
+        st.caption(t("A new project is added next to the existing ones; nothing is deleted. Members start with "
+                     "every consent off. Only upload documents you are allowed to share."))
         with st.form("new-project"):
             new_title = st.text_input(t("Project title"))
             new_course = st.text_input(t("Course"))
@@ -64,8 +64,8 @@ def render() -> None:
     if not demo:
         with st.container(border=True):
             st.markdown(f"**{t('Team members ({n})').format(n=len(cx.members))}**")
-            show('<div class="bf-muted">' + (esc(", ".join(cx.names.values())) or "No members yet.")
-                 + " · Each member opts in for themselves on the Private Check page.</div>")
+            show('<div class="bf-muted">' + (esc(", ".join(cx.names.values())) or esc(t("No members yet.")))
+                 + " · " + esc(t("Each member opts in for themselves on the Private Check page.")) + "</div>")
             with st.form("add-member", clear_on_submit=True):
                 new_member = st.text_input(t("Add a member (name)"))
                 if st.form_submit_button(t("Add member")):
@@ -120,11 +120,11 @@ def render() -> None:
         with st.container(border=True):
             st.markdown(f"**{t('Add decisions')}**")
             if not p.source_files:
-                st.warning("This project has no document, so no decision can be source-checked. Start a new project "
-                           "with its report.")
+                st.warning(t("This project has no document, so no decision can be source-checked. Start a new project "
+                             "with its report."))
             else:
                 if not cx.cards:
-                    if st.button("Propose decisions with the live model", disabled=not llm_available()):
+                    if st.button(t("Propose decisions with the live model"), disabled=not llm_available()):
                         try:
                             with st.spinner(t("Reading your report with the model… this can take a minute.")):
                                 orc.extract_project_decisions(actor=cx.viewer or "agent")
@@ -134,21 +134,21 @@ def render() -> None:
                     if not llm_available():
                         st.caption(orc.EXTRACTION_NEEDS_MODEL)
                 with st.form("add-decision", clear_on_submit=True):
-                    st.caption("Copy the quote word for word from the document; it is checked against that page.")
+                    st.caption(t("Copy the quote word for word from the document; it is checked against that page."))
                     d_title = st.text_input(t("Decision (what the team chose)"))
-                    d_why = st.text_area("Rationale (why, in the team's words)", height=70)
-                    d_alts = st.text_input("Rejected alternatives (comma-separated)")
-                    d_file = st.selectbox("Document", p.source_files)
-                    d_page = st.number_input("Page", min_value=1, step=1)
-                    d_quote = st.text_area("Exact quote from that page", height=70)
+                    d_why = st.text_area(t("Rationale (why, in the team's words)"), height=70)
+                    d_alts = st.text_input(t("Rejected alternatives (comma-separated)"))
+                    d_file = st.selectbox(t("Document"), p.source_files)
+                    d_page = st.number_input(t("Page"), min_value=1, step=1)
+                    d_quote = st.text_area(t("Exact quote from that page"), height=70)
                     if st.form_submit_button(t("Add decision")):
                         try:
                             card = orc.add_decision(title=d_title, rationale=d_why, alternatives=d_alts.split(","),
                                                     source_file=d_file, page=int(d_page), quote=d_quote,
                                                     actor=cx.viewer or "agent")
                             if card.review_status == ReviewStatus.unsupported:
-                                st.warning("Added, but the quote was not found on that page, so it can never be "
-                                           "assessed. Check the page number and the exact wording.")
+                                st.warning(t("Added, but the quote was not found on that page, so it can never be "
+                                             "assessed. Check the page number and the exact wording."))
                             else:
                                 st.rerun()
                         except ValueError as err:
@@ -179,13 +179,12 @@ def render() -> None:
             for r in d.source_refs:
                 show(quote_block(r))
             if d.review_status == ReviewStatus.unsupported:
-                st.warning("No verified source: the quote is not on the cited page, so this decision is never assessed.")
+                st.warning(t("No verified source: the quote is not on the cited page, so this decision is never assessed."))
             if d.review_status == ReviewStatus.proposed:
-                show('<div class="bf-muted">Proposed: not assessed until a member checks the quote and confirms it.'
-                     '</div>')
+                show('<div class="bf-muted">' + esc(t("Proposed: not assessed until a member checks the quote and confirms it.")) + '</div>')
                 if cx.viewer is None:
                     show('<div class="bf-muted">' + (t("Enter your access code in the sidebar to continue.") if cx.locked
-                         else "Add members first: only a member can confirm a decision.") + '</div>')
+                         else t("Add members first: only a member can confirm a decision.")) + '</div>')
                 else:
                     owner = st.selectbox(t("Owner (who made this decision)"), [None, *cx.members], key=f"owner-{d.id}",
                                          format_func=lambda m: t("not declared") if m is None else cx.names[m])
@@ -195,8 +194,8 @@ def render() -> None:
 
     if not demo:
         with st.expander(t("Delete this project")):
-            st.caption("Deletes this project's decisions, members, answers, missions and log. It cannot be undone. "
-                       "Other projects and the demo are not affected.")
+            st.caption(t("Deletes this project's decisions, members, answers, missions and log. It cannot be undone. "
+                         "Other projects and the demo are not affected."))
             typed = st.text_input(t("Type the project title to confirm"), key="delete-title")
             if st.button(t("Delete project"), disabled=typed.strip() != p.title):
                 orc.delete_project(p.id, typed, actor=cx.viewer or "agent")

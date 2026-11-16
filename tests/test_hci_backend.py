@@ -127,3 +127,28 @@ def test_the_signing_secret_is_created_once_and_never_the_member_code():
     assert first == second and db.get_setting("auth:secret")
     code = auth.issue_member_code("M04")
     assert code.replace("-", "") not in first
+
+
+def test_a_hostile_token_cannot_crash_the_check():
+    token = auth.make_session_token("M04", now=1_000_000.0)
+    who, expiry, _ = token.rsplit("|", 2)
+    for bad in (f"{who}|{expiry}|\u00e9\u00e9\u00e9", f"{who}|{expiry}|{'x' * 5000}", "|", "||", "a|b|c", "\u0000"):
+        assert auth.verify_session_token(bad, "M04", now=1_000_000.0) is False
+
+
+def test_talking_points_with_markup_are_shown_as_text_not_markdown():
+    from pathlib import Path
+
+    from streamlit.testing.v1 import AppTest
+    card = db.get_record(DecisionCard, "D03")
+    db.save_records(card.model_copy(update={"title": "Use F1 ![x](http://tracker.example/p.png) <b>now</b>"}))
+    accepted()
+    root = Path(__file__).resolve().parents[1]
+    at = AppTest.from_file(str(root / "app.py"), default_timeout=60)
+    at.run()
+    at.sidebar.selectbox(key="viewer").set_value("M04")
+    at.sidebar.radio[0].set_value("4. Teach Each Other")
+    at.run()
+    out = " ".join(md.value for md in at.markdown)
+    assert "&lt;b&gt;now&lt;/b&gt;" in out and "<li>Mentor: explain" in out
+    assert "![x](http://tracker.example/p.png)" in out and "<img" not in out   # shown literally, never rendered

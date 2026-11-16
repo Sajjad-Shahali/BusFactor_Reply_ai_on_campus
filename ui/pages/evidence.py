@@ -13,6 +13,21 @@ from ui.widgets import (
 )
 
 
+LIMITS = [
+    "Scores are practice feedback, not grades. A score from the model can be wrong.",
+    "One correct answer shows someone explained one decision on one day, not that they'll remember it.",
+    "Decision Coverage is a prototype indicator, not a validated metric.",
+    "In the synthetic demo, answers are scored offline with a keyword rubric on made-up data, as a stand-in for the "
+    "model. A score of 2 also needs explained reasoning and the scenario's own conclusion.",
+    "In your own projects without the live model, nothing is scored automatically: answers wait for human review. "
+    "With the model, unsure or inconsistent grades also go to human review.",
+    "Answers that try to instruct the grader are never scored. The app cannot stop anyone from using an outside AI tool.",
+    "No source means no assessment. A decision is assessed only after a member confirms it.",
+    "If nobody can explain a decision, the app points to the course material or the TA.",
+    "In a small team even totals can identify people, so the team view shows only counts per decision.",
+]
+
+
 def render() -> None:
     cx = ctx()
     page_header(6, "Evidence & Limits", "Where every decision comes from, what the agent did, and what it can't do.")
@@ -45,8 +60,8 @@ def render() -> None:
             "Quote": " / ".join(r.quote for r in d.source_refs),
         } for d in cx.cards.values()]), hide_index=True, width="stretch")
     with actions:
-        st.caption("Shared project steps, plus your own private steps. Other members' checks, consents and "
-                   "retests are never shown here, and answers and scores are never written to the log.")
+        st.caption(t("Shared project steps, plus your own private steps. Other members' checks, consents and "
+                     "retests are never shown here, and answers and scores are never written to the log."))
         st.dataframe(log_table(log[::-1]), hide_index=True, width="stretch")
     with abstain:
         flagged = [e for e in log if any(k in e.action for k in ("abstain", "blocked", "answer_request"))
@@ -85,19 +100,6 @@ def render() -> None:
                         orc.apply_review(item.evidence_id, score, note, reviewer_code=reviewer_code)
                         st.rerun()
     with limits:
-        st.markdown(
-            "- Scores are practice feedback, not grades. A score from the model can be wrong.\n"
-            "- One correct answer shows someone explained one decision on one day, not that they'll remember it.\n"
-            "- Decision Coverage is a prototype indicator, not a validated metric.\n"
-            "- In the synthetic demo, answers are scored offline with a keyword rubric on made-up data, as a stand-in "
-            "for the model. A score of 2 also needs explained reasoning and the scenario's own conclusion.\n"
-            "- In your own projects without the live model, nothing is scored automatically: answers wait for human "
-            "review. With the model, unsure or inconsistent grades also go to human review.\n"
-            "- Answers that try to instruct the grader are never scored. The app cannot stop anyone from using an "
-            "outside AI tool.\n"
-            "- No source means no assessment. A decision is assessed only after a member confirms it.\n"
-            "- If nobody can explain a decision, the app points to the course material or the TA.\n"
-            "- In a small team even totals can identify people, so the team view shows only counts per decision."
-        )
+        st.markdown("\n".join(f"- {t(item)}" for item in LIMITS))
 
     page_nav(6)

@@ -37,11 +37,12 @@ def render() -> None:
                 show(pill(label, kind))
 
             if m.status == MissionStatus.proposed:
-                st.write("Both people must accept the mission before the retest.")
+                st.write(t("Both people must accept the mission before the retest."))
                 continue
             if m.status == MissionStatus.verified:
                 show(win("Confirmed: you can explain it",
-                         f"You explained {dlabel(m.decision_id)} on a new question, with no hints. Team coverage went up."))
+                         t("You explained {d} on a new question, with no hints. Team coverage went up.").format(
+                             d=dlabel(m.decision_id))))
                 if orc.followup_due(m):
                     st.info(t("Follow-up check due: you passed the retest for {d} {n} days ago. One new question "
                               "shows whether it stuck.").format(d=dlabel(m.decision_id),
@@ -54,7 +55,7 @@ def render() -> None:
                             st.warning(str(err))
                 continue
             if not cx.members[cx.viewer].consent_assessment:
-                st.warning("You have not agreed to be assessed, so the retest is not available.")
+                st.warning(t("You have not agreed to be assessed, so the retest is not available."))
                 continue
             if not m.session_done:   # the retest follows the teaching session
                 st.info(t("Hold your teaching session first, then come back for the retest."))
@@ -67,7 +68,7 @@ def render() -> None:
             q, ev = next(((q, ev) for q, ev in orc.my_questions(cx.viewer, cx.viewer) if q.id == m.retest_question_id),
                          (None, None))
             if ev is not None:  # one answer per question: a retry needs a NEW question
-                show(f'<div class="bf-muted">Your answer to the last question was recorded: {esc(ev.feedback)}</div>')
+                show(f'<div class="bf-muted">{esc(t("Your answer to the last question was recorded"))}: {esc(ev.feedback)}</div>')
             if q is None or ev is not None:
                 if st.button(t("Start a new independent question"), key=f"rt-{m.id}"):
                     try:
@@ -84,7 +85,7 @@ def render() -> None:
             show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-lock">{esc(attempt)}</span></div>')
             if q.scenario:
-                show(f'<div class="bf-muted">New situation: {esc(q.scenario)}</div>')
+                show(f'<div class="bf-muted">{esc(t("New situation"))}: {esc(q.scenario)}</div>')
             show(f'<div class="bf-question">{esc(q.prompt)}</div>')
             answer = draft_box(f"retest-{m.id}", t("Your answer"), 130)
             if st.button(t("Submit"), type="primary", key=f"retest-submit-{m.id}"):
@@ -96,13 +97,14 @@ def render() -> None:
                     clear_draft(f"retest-{m.id}")
                     cov = coverage_text(res.coverage.numerator, res.coverage.denominator)
                     if res.evidence.rubric_score == 2:
-                        show(win("Confirmed: you can explain it", f"New question passed. Team coverage is now {cov}."))
+                        show(win("Confirmed: you can explain it", t("New question passed. Team coverage is now {cov}.").format(cov=cov)))
                     else:
                         label, kind = EVIDENCE_PILL[res.evidence.status.value]
                         show(pill(label, kind))
                         st.markdown(t("Not there yet. Ask your mentor to go through it again, then try a new question."))
-                    st.markdown(f"Result: {res.evidence.feedback}")
-                    st.markdown(f"Mission status: **{res.mission.status.value}** · team coverage now {cov}")
+                    st.markdown(f"{t('Result')}: {res.evidence.feedback}")
+                    st.markdown(t("Mission status: **{status}** · team coverage now {cov}").format(
+                        status=res.mission.status.value, cov=cov))
 
     st.subheader(t("Defense simulator"))
     sim_intro = t("A mock oral: a random question on one of your project's decisions, no hints. Practice only: "
@@ -125,7 +127,7 @@ def render() -> None:
             show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-muted">{esc(dlabel(sim_open.decision_id))} · {esc(cx.cards[sim_open.decision_id].title)}</span></div>')
             if sim_open.scenario:
-                show(f'<div class="bf-muted">New situation: {esc(sim_open.scenario)}</div>')
+                show(f'<div class="bf-muted">{esc(t("New situation"))}: {esc(sim_open.scenario)}</div>')
             show(f'<div class="bf-question">{esc(sim_open.prompt)}</div>')
             sim_answer = draft_box("sim-answer", t("Your answer"), 120)
             if st.button(t("Send answer"), type="primary", key="sim-send"):

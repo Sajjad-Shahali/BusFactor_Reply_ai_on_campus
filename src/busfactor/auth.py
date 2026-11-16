@@ -128,4 +128,6 @@ def verify_session_token(token: str, member_id: str, now: Optional[float] = None
     except ValueError:
         return False
     current = now if now is not None else time.time()
-    return (who == member_id and current < expiry_at and hmac.compare_digest(_sign(f"{who}|{expiry}"), signature))
+    # compare as bytes: compare_digest raises on non-ASCII text, and the token comes from the page link
+    return (who == member_id and current < expiry_at
+            and hmac.compare_digest(_sign(f"{who}|{expiry}").encode(), signature.encode()))
