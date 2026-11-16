@@ -65,18 +65,30 @@ protected = orc.is_protected()
 unlocked = st.session_state.setdefault("unlocked", set())
 
 with box_nav:
-    page = st.radio(t("Go to"), PAGES, captions=[t(h) for h in PAGE_HINTS], index=start_page, format_func=t,
+    current = st.session_state.get("page", PAGES[start_page])
+    page = st.radio(t("Go to"), PAGES, index=start_page, format_func=t,
+                    captions=[t(h) if PAGES[i] == current else "" for i, h in enumerate(PAGE_HINTS)],
                     key="page")   # keyed: the selected page survives a language switch
 
 with box_you:
-    picked = st.selectbox(t("Who are you?") if protected else t("Who are you? (demo identity switch, not a login)"),
+    picked = st.selectbox(t("Who are you?") if protected else t("View as"),
                           member_ids, format_func=lambda m: names[m] + (f" ({m})" if orc.is_demo_project() else ""),
-                          index=member_ids.index(qp_as) if qp_as in member_ids else 0, key="viewer")
+                          index=member_ids.index(qp_as) if qp_as in member_ids else 0, key="viewer",
+                          help=None if protected else t("Demo identity switch, not a login: anyone can pick any member."))
+    if not protected:
+        show(f'<div class="bf-muted">{esc(t("Demo identity switch, not a login."))}</div>')
     viewer, locked = picked, False
+    # "keep me signed in": a signed, expiring token in the page link (opt-in, see below)
+    token = st.query_params.get("k", "")
+    if picked and protected and picked not in unlocked and token and auth.verify_session_token(token, picked):
+        unlocked.add(picked)
     if picked and protected and picked not in unlocked:
         # a protected project shows a member's answers only after their personal access code is entered
         viewer, locked = None, True
         entered = st.text_input(t("Your access code"), type="password", key=f"code-{picked}")
+        keep = st.checkbox(t("Keep me signed in on this device (7 days)"), key=f"keep-{picked}",
+                           help=t("Adds a private token to this page's link. Anyone who has the link can open your "
+                                  "answers until it expires, so do not share it."))
         if st.button(t("Unlock"), key=f"unlock-{picked}"):
             now = time.time()
             if now < st.session_state.get("lock_until", 0):
@@ -84,6 +96,8 @@ with box_you:
             elif auth.verify_member(picked, entered):
                 unlocked.add(picked)
                 st.session_state["fails"] = 0
+                if keep:
+                    st.query_params["k"] = auth.make_session_token(picked)
                 st.rerun()
             else:
                 st.session_state["fails"] = st.session_state.get("fails", 0) + 1
@@ -94,9 +108,17 @@ with box_you:
     if viewer:
         note = t("Signed in with an access code") if protected else t("Showing only this member's answers · no login yet")
         show(f'<div class="bf-me">{avatar(viewer, 30)}<div><b>{esc(names[viewer])}</b><span>{esc(note)}</span></div></div>')
+        if protected:
+            def sign_out(member: str = viewer) -> None:
+                unlocked.discard(member)
+                if "k" in st.query_params:
+                    del st.query_params["k"]
+            st.button(t("Sign out"), key="sign-out", on_click=sign_out)
 
 with box_foot:
     st.divider()
+    if st.toggle(t("Larger text"), key="big-text"):
+        st.markdown("<style>html { font-size: 118%; }</style>", unsafe_allow_html=True)
     st.caption(t(orc.grading_mode()))
     with st.popover(t("Reset demo data")):
         st.caption(t("Restores the synthetic demo to its starting point (coverage 1/5). Everything done in the demo "

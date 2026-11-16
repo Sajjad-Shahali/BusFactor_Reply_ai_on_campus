@@ -49,7 +49,7 @@ def test_interface_switches_to_italian_and_back():
     assert "DATI DEMO — sintetici" in " ".join(md.value for md in at.sidebar.markdown)
     goto(at, "3. Team Coverage")
     text = page_text(at)
-    assert "Copertura del team" in text and "Punto singolo di fallimento" in text
+    assert "Copertura del team" in text and "Solo 1 sa spiegarla" in text
     assert "1/5 (20%)" in text                      # numbers are language independent
     set_lang("en")
     english = open_app()

@@ -78,6 +78,16 @@ def recommend_missions(
     return missions
 
 
+def talking_points(decision: DecisionCard) -> list[str]:
+    """Conversation starters for the teaching session, built only from the confirmed card (no invented facts)."""
+    points = [f"Mentor: explain in your own words why the team chose \u201c{decision.title}\u201d."]
+    if decision.alternatives:
+        points.append(f"Mentor: what was the alternative ({', '.join(decision.alternatives)}) and why did it lose?")
+    points += ["Learner: ask one \u201cwhat if\u201d question: what would change if the data or the costs were different?",
+               "Swap roles: the learner explains it back without notes and the mentor listens for gaps."]
+    return points
+
+
 def set_consent(mission: TeachingMission, member_id: str) -> TeachingMission:
     """Record one participant's consent; both consents -> accepted."""
     if mission.status != MissionStatus.proposed:

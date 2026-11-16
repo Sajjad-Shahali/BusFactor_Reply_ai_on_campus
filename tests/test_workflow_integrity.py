@@ -326,6 +326,7 @@ def test_offline_setup_never_pretends_to_extract(tmp_path):
 
 def test_retest_page_asks_for_a_new_question_after_an_answer():
     m = accepted_d03()
+    orc.mark_session_done(m.id, "M04")
     orc.start_retest(m.id, "M04")
     orc.submit_retest(m.id, "I am not sure.", "M04")
     at = open_as("M04", "5. Defense Retest")
@@ -335,10 +336,10 @@ def test_retest_page_asks_for_a_new_question_after_an_answer():
 
 def test_private_check_offers_the_owner_check(fresh):
     at = open_as("M02", "2. Private Check")
-    assert any("Verify a decision you own" in md.value for md in at.markdown)
+    assert any(e.label == "Show you can explain your own decision" for e in at.expander)
     at.button(key="own-start").click().run()
     assert not at.exception
-    assert any("Owner check · no hints" in md.value for md in at.markdown)
+    assert any("Your own decision · no hints" in md.value for md in at.markdown)
 
 
 def test_private_check_respects_missing_consent():

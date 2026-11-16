@@ -9,8 +9,7 @@ from busfactor import orchestrator as orc
 from busfactor.i18n import t
 from ui.state import ctx
 from ui.widgets import (
-    dlabel, empty_state, esc, need_viewer, page_header,
-    pill, show,
+    dlabel, empty_state, esc, humanize_action, need_viewer, next_step_card, page_header, page_nav, pill, privacy_panel, show,
 )
 
 
@@ -18,11 +17,23 @@ def render() -> None:
     cx = ctx()
     page_header(6, "Evidence & Limits", "Where every decision comes from, what the agent did, and what it can't do.")
     need_viewer()
+    next_step_card()
+    privacy_panel()
     log = orc.team_log(cx.viewer)  # team events + the viewer's own private steps, never other members'
 
+    show_details = st.toggle(t("Show technical details"), key="log-details")
+
     def log_table(events):
-        return pd.DataFrame([{"time": e.ts.strftime("%H:%M:%S"), "actor": e.actor, "action": e.action,
-                              "detail": str(e.detail)} for e in events])
+        """Plain sentences by default; the raw action names and details only when asked for."""
+        rows = []
+        for e in events:
+            row = {t("Time"): e.ts.strftime("%Y-%m-%d %H:%M"), t("Who"): e.actor,
+                   t("What happened"): humanize_action(e.action)}
+            if show_details:
+                row[t("Action")] = e.action
+                row[t("Detail")] = str(e.detail)
+            rows.append(row)
+        return pd.DataFrame(rows)
 
     sources, actions, abstain, review, limits = st.tabs(
         [t("Sources"), t("Action log"), t("Abstentions & blocked"), t("Review queue"), t("Limits")])
@@ -88,3 +99,5 @@ def render() -> None:
             "- If nobody can explain a decision, the app points to the course material or the TA.\n"
             "- In a small team even totals can identify people, so the team view shows only counts per decision."
         )
+
+    page_nav(6)

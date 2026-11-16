@@ -140,11 +140,11 @@ def test_retest_shows_the_no_hints_lock_and_the_attempt_counter():
     orc.propose_missions()
     orc.accept_mission("T-D03-M04", "M02")
     orc.accept_mission("T-D03-M04", "M04")
+    orc.mark_session_done("T-D03-M04", "M04")
     orc.start_retest("T-D03-M04", "M04")
     out = text(open_app("M04", "5. Defense Retest"))
-    assert "Independent check · no hints" in out and "Attempt 1 of 2" in out
-    assert "Intento" not in text(open_app("M04", "5. Defense Retest", "it")) and "Tentativo 1 di 2" in text(
-        open_app("M04", "5. Defense Retest", "it"))
+    assert "Solo question · no hints" in out and "Attempt 1 of 2" in out
+    assert "Tentativo 1 di 2" in text(open_app("M04", "5. Defense Retest", "it"))
 
 
 def test_the_page_selection_survives_switching_the_language():

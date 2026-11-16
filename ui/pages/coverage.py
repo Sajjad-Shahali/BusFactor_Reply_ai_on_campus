@@ -13,8 +13,7 @@ from ui.theme import (
     COVERAGE_PILL,
 )
 from ui.widgets import (
-    coverage_text, dlabel, esc, page_header,
-    pill, ring, show,
+    coverage_text, dlabel, esc, next_step_card, page_header, page_nav, pill, privacy_panel, ring, show,
 )
 
 
@@ -22,6 +21,8 @@ def render() -> None:
     cx = ctx()
     page_header(3, "Team Coverage",
                 "How many decisions at least two of you can explain. Only counts are shown, never names or scores.")
+    next_step_card()
+    privacy_panel()
     report = orc.team_coverage()
     snaps = orc.coverage_snapshots()
     base = snaps[0] if snaps else None
@@ -30,16 +31,17 @@ def render() -> None:
     gained = report.numerator - start["numerator"]
     spof_drop = len(start.get("spof", [])) - len(report.spof_decision_ids)
     stats = [
-        (t("Before"), coverage_text(start["numerator"], start["denominator"]), t("when the project started")),
-        (t("Now"), coverage_text(report.numerator, report.denominator),
+        (t("Since the start"),
+         f'<span class="small">{esc(coverage_text(start["numerator"], start["denominator"]))} \u2192 '
+         f'{esc(coverage_text(report.numerator, report.denominator))}</span>',
          (t("<b>+1</b> decision covered") if gained == 1 else t("<b>+{n}</b> decisions covered").format(n=gained))
          if gained > 0 else t("no change yet")),
-        (t("Single points of failure"), str(len(report.spof_decision_ids)),
+        (t("Decisions only 1 person can explain"), str(len(report.spof_decision_ids)),
          t("<b>−{n}</b> since start").format(n=spof_drop) if spof_drop > 0
          else t("decisions only one person can explain")),
     ]
-    tiles = "".join(f'<div><div class="k">{k}</div><div class="v">{v}</div><div class="s">{sub}</div></div>'
-                    for k, v, sub in stats)
+    tiles = "".join(f'<div><div class="k">{k}</div><div class="v{" small" if "small" in v else ""}">{v}</div>'
+                    f'<div class="s">{sub}</div></div>' for k, v, sub in stats)
     n_spof = len(report.spof_decision_ids)
     if report.denominator == 0:
         vkind, vicon, vmain = "idle", "?", t("Nothing has been assessed yet.")
@@ -98,3 +100,5 @@ def render() -> None:
     show('<div class="bf-muted" style="margin-top:0.8rem">Decision Coverage = critical decisions that 2 or more '
          'members can explain ÷ critical decisions that have been assessed. This is a prototype indicator, '
          'not a validated metric. "Not assessed" is never counted as failed.</div>')
+
+    page_nav(3)

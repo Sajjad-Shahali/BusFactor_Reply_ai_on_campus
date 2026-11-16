@@ -46,7 +46,7 @@ from busfactor.interview import (
 )
 from busfactor.knowledge import add_manual_card, confirm_card, decision_id, extract_decisions
 from busfactor.llm_provider import demo_mode, llm_available
-from busfactor.missions import apply_retest, recommend_missions, set_consent
+from busfactor.missions import apply_retest, recommend_missions, set_consent, talking_points
 from busfactor.models import (
     DEMO_PROJECT_ID, AssessmentEvidence, CoverageReport, DecisionCard, EvidenceStatus, InterviewQuestion, LogEvent,
     Member, MissionStatus, Project, QuestionType, ReviewStatus, TeachingMission, utcnow,
@@ -735,7 +735,7 @@ def reminders(member_id: str, now: Optional[datetime] = None) -> list[dict]:
     for m in missions(member.project_id):
         if member_id not in (m.mentor_id, m.learner_id):
             continue
-        if m.status == MissionStatus.accepted and not m.followup_done:
+        if m.status == MissionStatus.accepted and not m.followup_done and not m.session_done:
             idle = _days_since(m.accepted_at, now)
             if idle is not None and idle >= REMINDER_DAYS:
                 found.append({"kind": "session", "mission_id": m.id, "decision_id": m.decision_id, "days": idle})
@@ -855,8 +855,8 @@ def apply_review(evidence_id: str, score: int, feedback: str = "", project_id: O
 
 # ------------------------------------------------------------------ team report export (counts only)
 
-STATUS_WORDS = {"covered": "Covered (2+ people can explain it)", "single_point_of_failure": "Single point of failure",
-                "no_explainer": "No explainer yet", "not_assessed": "Not assessed"}
+STATUS_WORDS = {"covered": "2+ people can explain it", "single_point_of_failure": "Only 1 person can explain it",
+                "no_explainer": "Nobody can explain it yet", "not_assessed": "Not assessed"}
 
 
 def _cell(text: object) -> str:
@@ -878,7 +878,7 @@ def export_team_report(project_id: Optional[str] = None, now: Optional[datetime]
              else "- **Now:** not measurable yet (no assessed decisions)"]
     if snaps:
         lines.append(f"- **At the start:** {snaps[0]['numerator']}/{snaps[0]['denominator']}")
-    lines += [f"- **Single points of failure:** {len(report.spof_decision_ids)}", "",
+    lines += [f"- **Decisions only 1 person can explain:** {len(report.spof_decision_ids)}", "",
               "## Decisions", "", "| ID | Decision | Status | Can explain it | Source | Next step |",
               "|---|---|---|---|---|---|"]
     for c in report.per_decision:
@@ -1142,7 +1142,7 @@ def export_team_report_pdf(project_id: Optional[str] = None, now: Optional[datet
         Paragraph(f"BusFactor team report: {esc_markup(p.title)}", styles["Title"]),
         Paragraph(esc_markup(f"{p.course or 'No course given'}  ·  generated {stamp}{demo_note}"), styles["Normal"]),
         Spacer(1, 8 * mm), Paragraph("Decision coverage", styles["Heading2"]), chart,
-        Paragraph(f"Single points of failure: {len(report.spof_decision_ids)}", styles["Normal"]),
+        Paragraph(f"Decisions only 1 person can explain: {len(report.spof_decision_ids)}", styles["Normal"]),
         Spacer(1, 5 * mm), Paragraph("Decisions", styles["Heading2"]), table,
         Spacer(1, 5 * mm), Paragraph("Teaching missions", styles["Heading2"]),
         Paragraph(esc_markup(mission_line), styles["Normal"]), Spacer(1, 6 * mm),
@@ -1169,3 +1169,97 @@ def retest_progress(mission_id: str) -> tuple[int, Optional[int]]:
              and not is_simulator_question(q)]
     bank = bank_entry(decision)
     return max(len(taken), 1), (len(bank.get("transfer", [])) if bank else None)
+
+
+# ------------------------------------------------------------------ teaching-session progress
+
+def session_talking_points(mission_id: str) -> list[str]:
+    return talking_points(_card(_mission(mission_id).decision_id))
+
+
+def set_session_step(mission_id: str, member_id: str, index: int, done: bool) -> TeachingMission:
+    """Tick (or untick) one of the mission's steps. Only the mentor and the learner, only once both accepted.
+
+    When every step is ticked the session counts as held, which opens the retest in the app.
+    """
+    mission = _mission(mission_id)
+    if member_id not in (mission.mentor_id, mission.learner_id):
+        raise PermissionError("Only the two people in the mission can update it.")
+    if mission.status not in (MissionStatus.accepted, MissionStatus.completed, MissionStatus.verified):
+        raise ValueError("Both people must accept the mission first.")
+    if not 0 <= index < len(mission.steps):
+        raise ValueError("Unknown step.")
+    steps = sorted(set(mission.steps_done) | {index} if done else set(mission.steps_done) - {index})
+    finished = len(steps) == len(mission.steps)
+    updated = mission.model_copy(update={
+        "steps_done": steps, "session_done": finished,
+        "session_done_at": (mission.session_done_at or utcnow()) if finished else None})
+    db.save_records(updated)
+    db.log(member_id, "session_progress", {"mission_id": mission_id, "done": len(steps), "of": len(mission.steps)},
+           audience=[m for m in (mission.mentor_id, mission.learner_id) if m], project_id=mission.project_id)
+    return updated
+
+
+def mark_session_done(mission_id: str, member_id: str) -> TeachingMission:
+    """Both people say the teaching session happened: all steps ticked at once."""
+    mission = _mission(mission_id)
+    result = mission
+    for i in range(len(mission.steps)):
+        result = set_session_step(mission_id, member_id, i, True)
+    return result
+
+
+# ------------------------------------------------------------------ "your next step"
+
+@dataclass
+class NextStep:
+    """The single most useful thing this member can do now: where to go (page index) and what to say."""
+    page: int                 # 0 overview, 1 setup, 2 private check, 3 coverage, 4 teach, 5 retest, 6 evidence
+    text: str                 # English template; the UI translates it
+    button: str
+    params: dict = field(default_factory=dict)
+
+
+def next_step(member_id: str, now: Optional[datetime] = None) -> NextStep:
+    member = _member(member_id)
+    pid = member.project_id
+    assessable = [d for d in decisions(pid) if is_assessable(d)]
+    short = lambda did: did.rsplit("-", 1)[-1]  # noqa: E731
+    if not assessable:
+        return NextStep(1, "Add and confirm the project's key decisions first.", "Open Project Setup")
+    if not member.consent_assessment:
+        return NextStep(2, "Agree to be assessed to start your private check. You can withdraw at any time.",
+                        "Open Private Check")
+    mine = [m for m in missions(pid) if member_id in (m.mentor_id, m.learner_id)]
+    for m in mine:
+        my_consent = m.mentor_consent if member_id == m.mentor_id else m.learner_consent
+        if m.status == MissionStatus.proposed and not my_consent:
+            return NextStep(4, "A teaching session on {d} is waiting for your OK.", "Open Teach Each Other",
+                            {"d": short(m.decision_id)})
+    for m in mine:
+        if m.status == MissionStatus.accepted and not m.session_done:
+            return NextStep(4, "Hold your teaching session on {d}, then tick the steps off.", "Open Teach Each Other",
+                            {"d": short(m.decision_id)})
+    for m in mine:
+        if m.learner_id == member_id and m.status in (MissionStatus.accepted, MissionStatus.completed):
+            return NextStep(5, "Take your retest on {d}: a new question, no hints.", "Open Defense Retest",
+                            {"d": short(m.decision_id)})
+    for m in mine:
+        if m.learner_id == member_id and followup_due(m, now):
+            return NextStep(5, "Follow-up check due on {d}: one new question shows whether it stuck.",
+                            "Open Defense Retest", {"d": short(m.decision_id)})
+    answered = {e.question_id for e in db.get_private_evidence(member_id, member_id)}
+    open_questions = [q for q, _ in my_questions(member_id, member_id)
+                      if q.id not in answered and (q.mode != "independent" or is_owner_check(q))]
+    if open_questions:
+        return NextStep(2, "You have {n} question(s) waiting for your answer.", "Open Private Check",
+                        {"n": len(open_questions)})
+    if suggest_check_decisions(member_id):
+        return NextStep(2, "Take your private check: two short questions on decisions you did not make.",
+                        "Open Private Check")
+    report = team_coverage(pid)
+    if report.spof_decision_ids and not any(m.mentor_id for m in missions(pid)):
+        return NextStep(4, "{n} decision(s) can only be explained by one person: set up teaching sessions.",
+                        "Open Teach Each Other", {"n": len(report.spof_decision_ids)})
+    return NextStep(5, "You are up to date. Practise with the defense simulator before the oral.", "Open Defense Retest")
+

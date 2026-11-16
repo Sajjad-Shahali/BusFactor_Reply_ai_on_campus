@@ -298,6 +298,141 @@ IT.update({
     "Download team report (PDF)": "Scarica il report del team (PDF)",
 })
 
+
+# ---- plain-language labels, guidance, session checklist, privacy, log (HCI pass)
+IT.update({
+    "Only 1 can explain it": "Solo 1 sa spiegarla", "2+ can explain it": "In 2+ sanno spiegarla",
+    "Nobody can explain it yet": "Nessuno sa ancora spiegarla", "Retest: try again": "Nuovo test: riprova",
+    "Confirmed: can explain it": "Confermato: sa spiegarla", "Confirmed: you can explain it": "Confermato: sai spiegarla",
+    "Decisions only 1 person can explain": "Decisioni che sa spiegare 1 sola persona",
+    "Since the start": "Dall'inizio",
+    # pill tooltips
+    "Only one member has shown they can explain this decision. If they are absent, nobody can defend it.":
+        "Solo un membro ha dimostrato di saper spiegare questa decisione. Se è assente, nessuno può difenderla.",
+    "At least two members have shown they can explain this decision, so the team does not depend on one person.":
+        "Almeno due membri hanno dimostrato di saper spiegare questa decisione, quindi il team non dipende da una "
+        "sola persona.",
+    "Members were checked, but nobody has shown they can explain this decision yet.":
+        "I membri sono stati verificati, ma nessuno ha ancora dimostrato di saper spiegare questa decisione.",
+    "Nobody has answered a question on this decision yet. That is unknown, not failed.":
+        "Nessuno ha ancora risposto a una domanda su questa decisione. È sconosciuto, non fallito.",
+    "The learner explained the decision on a new question, with no hints.":
+        "Lo studente ha spiegato la decisione su una nuova domanda, senza aiuti.",
+    "The last retest answer was not complete. The learner can try a new question.":
+        "L'ultima risposta del nuovo test non era completa. Lo studente può provare con una nuova domanda.",
+    "The grader was not sure, so a person has to look at this answer.":
+        "Il valutatore non era sicuro, quindi una persona deve guardare questa risposta.",
+    # your next step
+    "Your next step": "Il tuo prossimo passo", "Progress: step {n} of 6": "Avanzamento: passo {n} di 6",
+    "Add and confirm the project's key decisions first.": "Aggiungi e conferma prima le decisioni chiave del progetto.",
+    "Open Project Setup": "Apri Impostazione progetto", "Open Private Check": "Apri Verifica privata",
+    "Open Teach Each Other": "Apri Insegnatevi a vicenda", "Open Defense Retest": "Apri Nuovo test",
+    "Agree to be assessed to start your private check. You can withdraw at any time.":
+        "Accetta di essere valutato per iniziare la verifica privata. Puoi ritirarti in qualsiasi momento.",
+    "A teaching session on {d} is waiting for your OK.": "Una sessione di insegnamento su {d} aspetta il tuo OK.",
+    "Hold your teaching session on {d}, then tick the steps off.":
+        "Tieni la sessione di insegnamento su {d}, poi spunta i passaggi.",
+    "Take your retest on {d}: a new question, no hints.": "Fai il nuovo test su {d}: una nuova domanda, senza aiuti.",
+    "Follow-up check due on {d}: one new question shows whether it stuck.":
+        "Verifica di richiamo su {d}: una nuova domanda mostra se è rimasto.",
+    "You have {n} question(s) waiting for your answer.": "Hai {n} domanda/e in attesa di risposta.",
+    "Take your private check: two short questions on decisions you did not make.":
+        "Fai la verifica privata: due brevi domande su decisioni che non hai preso tu.",
+    "{n} decision(s) can only be explained by one person: set up teaching sessions.":
+        "{n} decisione/i sa spiegare una sola persona: organizza le sessioni di insegnamento.",
+    "You are up to date. Practise with the defense simulator before the oral.":
+        "Sei in pari. Allenati con il simulatore prima della discussione.",
+    "Start the guided tour": "Avvia il tour guidato", "Decisions at a glance": "Decisioni in sintesi",
+    "Show the 3D map (optional)": "Mostra la mappa 3D (facoltativa)",
+    # private check
+    "Questions about decisions you didn't make. Your answers and feedback are private to you.":
+        "Domande su decisioni che non hai preso tu. Risposte e feedback sono privati.",
+    "Show you can explain your own decision": "Dimostra di saper spiegare la tua decisione",
+    "Start my question": "Avvia la mia domanda", "Your own decision · no hints": "La tua decisione · senza aiuti",
+    "Solo question · no hints": "Domanda singola · senza aiuti",
+    "Checking your answer…": "Controllo la tua risposta…", "Preparing a question…": "Preparo una domanda…",
+    "Reading your report with the model… this can take a minute.":
+        "Leggo il tuo report con il modello… può volerci un minuto.",
+    "Your draft is saved while you move around. After you send it, you cannot edit it.":
+        "La bozza viene salvata mentre ti sposti. Dopo l'invio non puoi modificarla.",
+    "Not there yet. Ask your mentor to go through it again, then try a new question.":
+        "Non ci sei ancora. Chiedi al mentore di rivederla con te, poi prova una nuova domanda.",
+    # teaching session
+    "Set up teaching sessions": "Organizza le sessioni di insegnamento",
+    "Your teaching session": "La vostra sessione di insegnamento", "Conversation starters": "Spunti di conversazione",
+    "Session held. The learner can take the retest now.": "Sessione svolta. Lo studente può fare il nuovo test.",
+    "We held the session: tick everything": "Abbiamo fatto la sessione: spunta tutto",
+    "Hold your teaching session first, then come back for the retest.":
+        "Fate prima la sessione di insegnamento, poi torna per il nuovo test.",
+    "We already did the session": "Abbiamo già fatto la sessione",
+    # privacy panel
+    "Who can see what?": "Chi può vedere cosa?",
+    "Your answers, scores and feedback": "Le tue risposte, i punteggi e il feedback",
+    "Only you, after you enter your access code.": "Solo tu, dopo aver inserito il codice di accesso.",
+    "Only you (in this demo anyone can switch member, so it is synthetic data).":
+        "Solo tu (in questa demo chiunque può cambiare membro, quindi sono dati sintetici).",
+    "Team coverage and the exports": "Copertura del team ed esportazioni",
+    "Everyone in the team, as counts only: no names, answers or scores.":
+        "Tutto il team, solo come conteggi: niente nomi, risposte o punteggi.",
+    "A teaching session": "Una sessione di insegnamento",
+    "Only the mentor and the learner until both accept; then the team sees that it exists.":
+        "Solo il mentore e lo studente finché entrambi accettano; poi il team vede che esiste.",
+    "Answers the model could not score": "Risposte che il modello non ha potuto valutare",
+    "A reviewer, and only if you agreed; never with your name.": "Un revisore, e solo se hai accettato; mai con il tuo nome.",
+    "The action log": "Il registro delle azioni",
+    "Shared project steps and your own steps; never another member's answers.":
+        "Passaggi condivisi del progetto e i tuoi; mai le risposte di un altro membro.",
+    # sidebar
+    "View as": "Visualizza come", "Demo identity switch, not a login.": "Cambio identità demo, non un login.",
+    "Demo identity switch, not a login: anyone can pick any member.":
+        "Cambio identità demo, non un login: chiunque può scegliere qualsiasi membro.",
+    "Keep me signed in on this device (7 days)": "Resta connesso su questo dispositivo (7 giorni)",
+    "Adds a private token to this page's link. Anyone who has the link can open your answers until it expires, so "
+    "do not share it.":
+        "Aggiunge un token privato al link di questa pagina. Chiunque abbia il link può aprire le tue risposte "
+        "finché non scade: non condividerlo.",
+    "Sign out": "Esci", "Larger text": "Testo più grande",
+    # log
+    "Show technical details": "Mostra i dettagli tecnici", "Time": "Ora", "Who": "Chi", "What happened": "Cosa è successo",
+    "Action": "Azione", "Detail": "Dettaglio",
+    "The synthetic demo was loaded.": "È stata caricata la demo sintetica.",
+    "A project was created.": "È stato creato un progetto.", "A member was added to the project.": "È stato aggiunto un membro al progetto.",
+    "A decision card was added.": "È stata aggiunta una scheda decisione.",
+    "A decision card was confirmed.": "È stata confermata una scheda decisione.",
+    "Access codes were issued.": "Sono stati emessi i codici di accesso.",
+    "Course material was added.": "È stato aggiunto materiale del corso.",
+    "Your consent choices were saved.": "Le tue scelte di consenso sono state salvate.",
+    "Decisions were chosen for your private check.": "Sono state scelte le decisioni per la tua verifica privata.",
+    "A question was prepared for you.": "È stata preparata una domanda per te.",
+    "A decision was skipped: it is not confirmed or has no source.":
+        "Una decisione è stata saltata: non è confermata o non ha una fonte.",
+    "A decision was skipped: nothing new to ask.": "Una decisione è stata saltata: niente di nuovo da chiedere.",
+    "A question on your own decision was prepared.": "È stata preparata una domanda sulla tua decisione.",
+    "Your answer was recorded and assessed.": "La tua risposta è stata registrata e valutata.",
+    "A request for the answer was handled (no answer given in a check).":
+        "Una richiesta della risposta è stata gestita (nessuna risposta data in una verifica).",
+    "An answer addressed to the grader was not scored.": "Una risposta rivolta al valutatore non è stata valutata.",
+    "Teaching sessions were worked out from the coverage.": "Le sessioni di insegnamento sono state ricavate dalla copertura.",
+    "Teaching sessions were saved.": "Le sessioni di insegnamento sono state salvate.",
+    "Someone agreed to take part in a teaching session.": "Qualcuno ha accettato di partecipare a una sessione di insegnamento.",
+    "Both people agreed to a teaching session.": "Entrambe le persone hanno accettato una sessione di insegnamento.",
+    "Steps of a teaching session were ticked off.": "Sono stati spuntati dei passaggi di una sessione di insegnamento.",
+    "A new retest question was prepared.": "È stata preparata una nuova domanda per il nuovo test.",
+    "A retest answer was recorded and assessed.": "Una risposta al nuovo test è stata registrata e valutata.",
+    "The retest result was applied to the mission.": "Il risultato del nuovo test è stato applicato alla missione.",
+    "A request for the answer was refused in the retest.": "Una richiesta della risposta è stata rifiutata nel nuovo test.",
+    "A retest answer addressed to the grader was not scored.":
+        "Una risposta al nuovo test rivolta al valutatore non è stata valutata.",
+    "A follow-up question was opened.": "È stata aperta una domanda di richiamo.",
+    "A defense-simulator question was prepared.": "È stata preparata una domanda per il simulatore.",
+    "A simulator answer was recorded (practice only).": "Una risposta del simulatore è stata registrata (solo allenamento).",
+    "A request for the answer was refused in the simulator.": "Una richiesta della risposta è stata rifiutata nel simulatore.",
+    "A simulator answer addressed to the grader was not scored.":
+        "Una risposta del simulatore rivolta al valutatore non è stata valutata.",
+    "A reviewer scored an answer.": "Un revisore ha valutato una risposta.",
+    "Team coverage was recorded.": "La copertura del team è stata registrata.",
+})
+
 # sentences built by coverage.py and missions.py: matched by shape, then translated with the same placeholders
 _DYNAMIC = [
     (r"^(\d+) members have each demonstrated it, so the team does not depend on one person\.$",

@@ -10,12 +10,34 @@ from busfactor.missions import explain_mission
 from busfactor.models import MissionStatus
 from ui.state import ctx
 from ui.theme import (
-    MISSION_PILL,
+    MISSION_PILL, PAGES,
 )
 from ui.widgets import (
-    dlabel, empty_state, esc, flow, need_viewer, page_header,
-    pill, show, show_reminders,
+    dlabel, empty_state, esc, flow, go_to, need_viewer, next_step_card, page_header, page_nav, pill, show, show_reminders,
 )
+
+
+def _tick(mission_id: str, index: int, viewer: str) -> None:
+    """Checkbox callback: save one ticked (or unticked) step of the teaching session."""
+    orc.set_session_step(mission_id, viewer, index, bool(st.session_state[f"step-{mission_id}-{index}"]))
+
+
+def session_block(m, viewer: str) -> None:
+    """The pair's checklist for the teaching session, conversation starters and the 'we did it' action."""
+    done = set(m.steps_done)
+    st.markdown(f"**{t('Your teaching session')}**")
+    for i, step in enumerate(m.steps):
+        st.checkbox(step, value=i in done, key=f"step-{m.id}-{i}", on_change=_tick, args=(m.id, i, viewer))
+    with st.expander(t("Conversation starters")):
+        for point in orc.session_talking_points(m.id):
+            st.markdown(f"- {point}")
+    if m.session_done:
+        st.success(t("Session held. The learner can take the retest now."))
+        if viewer == m.learner_id:
+            st.button(f"{t(PAGES[5])} \u2192", key=f"to-retest-{m.id}", type="primary", on_click=go_to, args=(5,))
+    elif st.button(t("We held the session: tick everything"), key=f"done-{m.id}"):
+        orc.mark_session_done(m.id, viewer)
+        st.rerun()
 
 
 def render() -> None:
@@ -23,8 +45,9 @@ def render() -> None:
     need_viewer()
     page_header(4, "Teach Each Other",
                 "For each decision only one person can explain, a teammate who understands it teaches one who doesn't.")
+    next_step_card()
     show_reminders()
-    if st.button(t("Find knowledge silos and propose missions"), type="primary"):
+    if st.button(t("Set up teaching sessions"), type="primary"):
         orc.propose_missions()
         st.rerun()
 
@@ -62,7 +85,10 @@ def render() -> None:
 
             show(flow(m))
             show(f'<div class="bf-muted">{esc(tr_dynamic(explain_mission(m, cx.labels)))}</div>')
-            st.markdown("\n".join(f"{i}. {step}" for i, step in enumerate(m.steps, 1)))
+            if involved and m.status in (MissionStatus.accepted, MissionStatus.completed):
+                session_block(m, cx.viewer)
+            else:
+                st.markdown("\n".join(f"{i}. {step}" for i, step in enumerate(m.steps, 1)))
 
             if involved and m.status == MissionStatus.proposed:
                 mine = m.mentor_consent if cx.viewer == m.mentor_id else m.learner_consent
@@ -73,3 +99,5 @@ def render() -> None:
                                type="primary"):
                     orc.accept_mission(m.id, cx.viewer)
                     st.rerun()
+
+    page_nav(4)

@@ -12,8 +12,7 @@ from ui.theme import (
     EVIDENCE_PILL, MISSION_PILL, PAGES,
 )
 from ui.widgets import (
-    LOCK_SVG, coverage_text, dlabel, empty_state, esc, need_viewer, page_header,
-    pill, show, show_reminders, win,
+    LOCK_SVG, clear_draft, coverage_text, dlabel, draft_box, empty_state, esc, go_to, need_viewer, next_step_card, page_header, page_nav, pill, show, show_reminders, win,
 )
 
 
@@ -22,6 +21,7 @@ def render() -> None:
     need_viewer()
     page_header(5, f"Defense Retest · {cx.names[cx.viewer]}",
                 "After the teaching session, answer a new question on your own. No hints are available here.")
+    next_step_card()
     show_reminders()
     mine = [m for m in orc.missions() if m.learner_id == cx.viewer and m.mentor_id]
     if not mine:
@@ -40,8 +40,8 @@ def render() -> None:
                 st.write("Both people must accept the mission before the retest.")
                 continue
             if m.status == MissionStatus.verified:
-                show(win("Transfer verified", f"You explained {dlabel(m.decision_id)} on a new question, with no hints. "
-                                              "Team coverage went up."))
+                show(win("Confirmed: you can explain it",
+                         f"You explained {dlabel(m.decision_id)} on a new question, with no hints. Team coverage went up."))
                 if orc.followup_due(m):
                     st.info(t("Follow-up check due: you passed the retest for {d} {n} days ago. One new question "
                               "shows whether it stuck.").format(d=dlabel(m.decision_id),
@@ -56,6 +56,14 @@ def render() -> None:
             if not cx.members[cx.viewer].consent_assessment:
                 st.warning("You have not agreed to be assessed, so the retest is not available.")
                 continue
+            if not m.session_done:   # the retest follows the teaching session
+                st.info(t("Hold your teaching session first, then come back for the retest."))
+                first, second = st.columns(2)
+                first.button(f"{t(PAGES[4])} \u2192", key=f"to-teach-{m.id}", on_click=go_to, args=(4,))
+                if second.button(t("We already did the session"), key=f"did-{m.id}"):
+                    orc.mark_session_done(m.id, cx.viewer)
+                    st.rerun()
+                continue
             q, ev = next(((q, ev) for q, ev in orc.my_questions(cx.viewer, cx.viewer) if q.id == m.retest_question_id),
                          (None, None))
             if ev is not None:  # one answer per question: a retry needs a NEW question
@@ -63,7 +71,8 @@ def render() -> None:
             if q is None or ev is not None:
                 if st.button(t("Start a new independent question"), key=f"rt-{m.id}"):
                     try:
-                        orc.start_retest(m.id, cx.viewer)
+                        with st.spinner(t("Preparing a question…")):
+                            orc.start_retest(m.id, cx.viewer)
                         st.rerun()
                     except ValueError as err:  # every scenario was used: no pass-chasing loop
                         st.warning(str(err))
@@ -72,26 +81,28 @@ def render() -> None:
             used_n, total_n = orc.retest_progress(m.id)
             attempt = (t("Attempt {n} of {m}").format(n=used_n, m=total_n) if total_n
                        else t("Attempt {n}").format(n=used_n))
-            show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Independent check · no hints"))}</span>'
+            show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-lock">{esc(attempt)}</span></div>')
             if q.scenario:
                 show(f'<div class="bf-muted">New situation: {esc(q.scenario)}</div>')
             show(f'<div class="bf-question">{esc(q.prompt)}</div>')
-            with st.form(f"retest-{m.id}"):
-                answer = st.text_area("Your answer", height=130)
-                if st.form_submit_button("Submit", type="primary"):
+            answer = draft_box(f"retest-{m.id}", t("Your answer"), 130)
+            if st.button(t("Submit"), type="primary", key=f"retest-submit-{m.id}"):
+                with st.spinner(t("Checking your answer…")):
                     res = orc.submit_retest(m.id, answer, cx.viewer)
-                    if res.blocked:
-                        st.error(res.message)
+                if res.blocked:
+                    st.error(res.message)
+                else:
+                    clear_draft(f"retest-{m.id}")
+                    cov = coverage_text(res.coverage.numerator, res.coverage.denominator)
+                    if res.evidence.rubric_score == 2:
+                        show(win("Confirmed: you can explain it", f"New question passed. Team coverage is now {cov}."))
                     else:
-                        cov = coverage_text(res.coverage.numerator, res.coverage.denominator)
-                        if res.evidence.rubric_score == 2:
-                            show(win("Transfer verified", f"New question passed. Team coverage is now {cov}."))
-                        else:
-                            label, kind = EVIDENCE_PILL[res.evidence.status.value]
-                            show(pill(label, kind))
-                        st.markdown(f"Result: {res.evidence.feedback}")
-                        st.markdown(f"Mission status: **{res.mission.status.value}** · team coverage now {cov}")
+                        label, kind = EVIDENCE_PILL[res.evidence.status.value]
+                        show(pill(label, kind))
+                        st.markdown(t("Not there yet. Ask your mentor to go through it again, then try a new question."))
+                    st.markdown(f"Result: {res.evidence.feedback}")
+                    st.markdown(f"Mission status: **{res.mission.status.value}** · team coverage now {cov}")
 
     st.subheader(t("Defense simulator"))
     sim_intro = t("A mock oral: a random question on one of your project's decisions, no hints. Practice only: "
@@ -105,27 +116,31 @@ def render() -> None:
         if sim_open is None:
             if st.button(t("Ask me a question"), key="sim-start"):
                 try:
-                    orc.start_simulator(cx.viewer)
+                    with st.spinner(t("Preparing a question…")):
+                        orc.start_simulator(cx.viewer)
                     st.rerun()
                 except ValueError as err:   # every scenario was practised
                     st.warning(str(err))
         else:
-            show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Independent check · no hints"))}</span>'
+            show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-muted">{esc(dlabel(sim_open.decision_id))} · {esc(cx.cards[sim_open.decision_id].title)}</span></div>')
             if sim_open.scenario:
                 show(f'<div class="bf-muted">New situation: {esc(sim_open.scenario)}</div>')
             show(f'<div class="bf-question">{esc(sim_open.prompt)}</div>')
-            with st.form("sim-form"):
-                sim_answer = st.text_area(t("Your answer"), height=120, key="sim-answer")
-                if st.form_submit_button(t("Send answer"), type="primary"):
+            sim_answer = draft_box("sim-answer", t("Your answer"), 120)
+            if st.button(t("Send answer"), type="primary", key="sim-send"):
+                with st.spinner(t("Checking your answer…")):
                     res = orc.submit_simulator(sim_open.id, sim_answer, cx.viewer)
-                    if res.blocked:
-                        st.error(res.message)
-                    else:
-                        st.rerun()
+                if res.blocked:
+                    st.error(res.message)
+                else:
+                    clear_draft("sim-answer")
+                    st.rerun()
         if sim_done:
             last_q, last_ev = sim_done[-1]
             label, kind = EVIDENCE_PILL[last_ev.status.value]
             show(f'{pill(label, kind)} <span class="bf-muted">{esc(dlabel(last_q.decision_id))} · '
                  f'{esc(t("{n} answered in the simulator").format(n=len(sim_done)))}</span>')
             st.markdown(f"{t('Result')}: {last_ev.feedback}")
+
+    page_nav(5)

@@ -8,15 +8,15 @@ PAGE_HINTS = ["The demo at a glance", "Key decisions and sources", "Your own que
               "Peer-teaching missions", "New question, no hints", "Sources, log, limits"]
 
 COVERAGE_PILL = {
-    "covered": ("Covered", "green"),
-    "single_point_of_failure": ("Single point of failure", "red"),
-    "no_explainer": ("No explainer yet", "ink"),
+    "covered": ("2+ can explain it", "green"),
+    "single_point_of_failure": ("Only 1 can explain it", "red"),
+    "no_explainer": ("Nobody can explain it yet", "ink"),
     "not_assessed": ("Not assessed", "gray"),
 }
 CARD_PILL = {"verified": ("Verified", "green"), "proposed": ("Needs review", "amber"),
              "unsupported": ("No source", "red")}
 MISSION_PILL = {"proposed": ("Waiting for consent", "amber"), "accepted": ("Accepted", "blue"),
-                "completed": ("Retest not passed yet", "gray"), "verified": ("Transfer verified", "green"),
+                "completed": ("Retest: try again", "gray"), "verified": ("Confirmed: can explain it", "green"),
                 "fallback": ("Ask the TA", "ink")}
 EVIDENCE_PILL = {"demonstrated": ("Demonstrated", "green"), "needs_practice": ("Needs practice", "amber"),
                  "insufficient_evidence": ("Not scored: needs human review", "gray")}
@@ -78,6 +78,7 @@ hr { border-color: var(--bf-line) !important; }
 
 /* BusFactor pieces */
 div.bf-muted { padding-bottom: 0.35rem; }
+.bf-muted { font-size: .92rem !important; }
 .bf-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font: 600 0.74rem/1.3 var(--bf-body);
            white-space: nowrap; }
 .bf-green { background: #E5F5EC; color: #17784C; }
@@ -86,7 +87,7 @@ div.bf-muted { padding-bottom: 0.35rem; }
 .bf-blue  { background: var(--bf-accent-soft); color: var(--bf-accent); }
 .bf-gray  { background: #EEF0F4; color: #4A5160; }
 .bf-ink   { background: #23272F; color: #FFFFFF; }
-.bf-step  { font: 500 0.72rem/1.3 var(--bf-mono); color: var(--bf-muted); text-transform: uppercase;
+.bf-step  { font: 500 0.78rem/1.3 var(--bf-mono); color: var(--bf-muted); text-transform: uppercase;
             letter-spacing: 0.08em; margin-bottom: -0.5rem; }
 .bf-sub   { color: var(--bf-muted); font-size: 1.02rem; margin-top: -0.3rem; margin-bottom: 1.4rem; max-width: 46rem; }
 .bf-quote { border-left: 2px solid var(--bf-accent); background: var(--bf-bg); padding: 0.65rem 0.95rem;
@@ -210,7 +211,7 @@ div.bf-muted { padding-bottom: 0.35rem; }
 .bf-kpi { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 16px;
           backdrop-filter: blur(4px); animation: bf-rise .5s ease both; }
 .bf-kpi:nth-child(2) { animation-delay: .08s; } .bf-kpi:nth-child(3) { animation-delay: .16s; } .bf-kpi:nth-child(4) { animation-delay: .24s; }
-.bf-kpi .k { font: 500 .68rem/1.3 var(--bf-mono); letter-spacing: .08em; text-transform: uppercase; color: #9FAAD6; }
+.bf-kpi .k { font: 500 .76rem/1.3 var(--bf-mono); letter-spacing: .08em; text-transform: uppercase; color: #9FAAD6; }
 .bf-kpi .v { font: 700 2rem/1.1 var(--bf-display); letter-spacing: -.02em; color: #fff; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .bf-kpi .s { font-size: .8rem; color: #8D97BC; margin-top: 2px; }
 .bf-kpi .s b { color: #46E0A8; font-weight: 600; }
@@ -262,9 +263,9 @@ div.bf-muted { padding-bottom: 0.35rem; }
 .bf-panel .bf-ring .trk { stroke: rgba(255,255,255,.1); }
 .bf-panel .bf-ring .lbl b { color: #fff; }
 .bf-panel .bf-ring .lbl span { color: #9FAAD6; }
-.bf-pstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.bf-pstats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .bf-pstats > div { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 16px; }
-.bf-pstats .k { font: 500 .68rem/1.3 var(--bf-mono); letter-spacing: .08em; text-transform: uppercase; color: #9FAAD6; }
+.bf-pstats .k { font: 500 .76rem/1.3 var(--bf-mono); letter-spacing: .08em; text-transform: uppercase; color: #9FAAD6; }
 .bf-pstats .v { font: 700 1.9rem/1.1 var(--bf-display); letter-spacing: -.02em; color: #fff; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .bf-pstats .s { font-size: .8rem; color: #8D97BC; margin-top: 2px; }
 .bf-pstats .s b { color: #46E0A8; font-weight: 600; }
@@ -374,6 +375,24 @@ button:focus-visible, [role="tab"]:focus-visible, summary:focus-visible { outlin
   .bf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bf-story { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- guidance: next step, privacy table, compact decision list, Back/Next ---------- */
+.bf-next { display: flex; gap: 12px; align-items: center; border: 1px solid rgba(111,136,255,.45); border-radius: 12px;
+           padding: 12px 16px; margin: 0 0 .5rem; background: rgba(111,136,255,.10); }
+.bf-next .nx { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+               background: #3A54E0; color: #fff; font: 700 1rem/1 var(--bf-body); }
+.bf-next b { display: block; font: 600 .78rem/1.3 var(--bf-mono); letter-spacing: .08em; text-transform: uppercase; color: #C5D0FF; }
+.bf-next span { font-size: 1.02rem; }
+.bf-who { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.bf-who th, .bf-who td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--bf-line); vertical-align: top; }
+.bf-who th { width: 32%; font-weight: 600; }
+.bf-list { list-style: none; margin: .2rem 0 1rem; padding: 0; display: grid; gap: 8px; }
+.bf-list li { display: flex; gap: 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--bf-line);
+              border-radius: 10px; background: rgba(18,26,51,.6); }
+.bf-list li .t { flex: 1; min-width: 0; } .bf-list li .c { color: #A9B2D6; font-size: .86rem; white-space: nowrap; }
+.bf-pstats .v.small { font-size: 1.35rem; line-height: 1.25; }
+.bf-stepper { cursor: default; }
+@media (max-width: 700px) { .bf-list li { flex-wrap: wrap; } .bf-who th { width: 40%; } }
 </style>
 """
 

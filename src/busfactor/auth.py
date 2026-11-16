@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+import time
 from typing import Optional
 
 from busfactor import database as db
@@ -91,3 +92,40 @@ def verify_member(member_id: str, code: str) -> bool:
 
 def verify_reviewer(project_id: str, code: Optional[str]) -> bool:
     return bool(code) and _check(_reviewer_key(project_id), str(code))
+
+
+# ------------------------------------------------------------------ optional "keep me signed in" token
+SESSION_DAYS = 7
+
+
+def _secret() -> bytes:
+    stored = db.get_setting("auth:secret")
+    if not stored:
+        stored = secrets.token_hex(32)
+        db.set_setting("auth:secret", stored)
+    return bytes.fromhex(stored)
+
+
+def _sign(payload: str) -> str:
+    return hmac.new(_secret(), payload.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def make_session_token(member_id: str, days: int = SESSION_DAYS, now: Optional[float] = None) -> str:
+    """A signed, expiring token a member can keep in their browser instead of retyping the code.
+
+    Anyone who holds the link can open that member's answers until it expires: the app tells the member not to share it.
+    """
+    expiry = int((now if now is not None else time.time()) + days * 86400)
+    payload = f"{member_id}|{expiry}"
+    return f"{payload}|{_sign(payload)}"
+
+
+def verify_session_token(token: str, member_id: str, now: Optional[float] = None) -> bool:
+    """True only for an unexpired token signed by this server for exactly this member."""
+    try:
+        who, expiry, signature = str(token).rsplit("|", 2)
+        expiry_at = int(expiry)
+    except ValueError:
+        return False
+    current = now if now is not None else time.time()
+    return (who == member_id and current < expiry_at and hmac.compare_digest(_sign(f"{who}|{expiry}"), signature))

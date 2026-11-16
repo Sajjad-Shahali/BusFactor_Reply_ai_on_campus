@@ -208,7 +208,7 @@ def test_exports_contain_counts_only():
     verified_mission()
     report, csv_text = orc.export_team_report("P01"), orc.export_decisions_csv("P01")
     assert "BusFactor team report" in report and "DEMO DATA, synthetic" in report
-    assert "2/5 (40%)" in report and "Single points of failure" in report
+    assert "2/5 (40%)" in report and "Decisions only 1 person can explain" in report
     secret_words = ["Member A", "Member B", "Member C", "Member D", "M01", "M02", "M03", "M04",
                     strong_answer(db.get_record(InterviewQuestion, orc._mission(MISSION).retest_question_id))]
     for text in (report, csv_text):

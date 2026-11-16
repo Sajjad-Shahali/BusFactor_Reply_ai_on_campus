@@ -15,6 +15,7 @@ from busfactor import orchestrator as orc
 from busfactor.i18n import t
 from busfactor.models import MissionStatus
 from ui.state import ctx
+from ui.theme import PAGES
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -86,9 +87,22 @@ def esc(text: object) -> str:
 PILL_ICONS = {"green": "✓", "red": "▲", "amber": "◐", "blue": "●", "gray": "○", "ink": "◆"}   # shape + colour
 
 
+PILL_TIPS = {
+    "Only 1 can explain it": "Only one member has shown they can explain this decision. If they are absent, nobody can defend it.",
+    "2+ can explain it": "At least two members have shown they can explain this decision, so the team does not depend on one person.",
+    "Nobody can explain it yet": "Members were checked, but nobody has shown they can explain this decision yet.",
+    "Not assessed": "Nobody has answered a question on this decision yet. That is unknown, not failed.",
+    "Confirmed: can explain it": "The learner explained the decision on a new question, with no hints.",
+    "Retest: try again": "The last retest answer was not complete. The learner can try a new question.",
+    "Not scored: needs human review": "The grader was not sure, so a person has to look at this answer.",
+}
+
+
 def pill(label: str, kind: str) -> str:
     icon = f'<i class="ic{" pulse" if kind == "red" else ""}" aria-hidden="true">{PILL_ICONS.get(kind, "")}</i>'
-    return f'<span class="bf-pill bf-{kind}">{icon}{esc(t(label))}</span>'
+    tip = PILL_TIPS.get(label)
+    title = f' title="{esc(t(tip))}"' if tip else ""
+    return f'<span class="bf-pill bf-{kind}"{title}>{icon}{esc(t(label))}</span>'
 
 
 MEMBER_COLORS = ["#4F6BFF", "#14B8A6", "#F59E0B", "#D946EF", "#38BDF8", "#F87171"]
@@ -114,7 +128,8 @@ def stepper(index: int) -> str:
             parts.append(f'<i class="{"done" if i <= index else ""}"></i>')
         state = "done" if i < index else "now" if i == index else ""
         parts.append(f'<div class="bf-st {state}"><span>{"✓" if i < index else i}</span>{esc(t(name))}</div>')
-    return f'<div class="bf-stepper">{"".join(parts)}</div>'
+    label = esc(t("Progress: step {n} of 6").format(n=index))
+    return f'<div class="bf-stepper" role="img" aria-label="{label}" title="{label}">{"".join(parts)}</div>'
 
 
 def ring(num: int, den: int, base_num: int) -> str:
@@ -213,3 +228,115 @@ def knowledge_map(report, improved: list[str], height: int = 470) -> None:
         st.iframe(page_html, height=height, alt=t("3D map of the decisions and who can explain them (text version below)"))
     else:
         components.html(page_html, height=height)
+
+# ------------------------------------------------------------------ guidance: next step, Back/Next, privacy
+def go_to(index: int) -> None:
+    """Button callback: open page `index` (the sidebar radio is keyed "page")."""
+    st.session_state["page"] = PAGES[index]
+
+
+def current_page_index() -> int:
+    page = st.session_state.get("page", PAGES[0])
+    return PAGES.index(page) if page in PAGES else 0
+
+
+def next_step_card() -> None:
+    """The one most useful thing this member can do now, with a button that goes there."""
+    cx = ctx()
+    if cx.viewer is None:
+        return
+    step = orc.next_step(cx.viewer)
+    text = t(step.text).format(**step.params) if step.params else t(step.text)
+    label = esc(t("Your next step"))
+    show(f'<div class="bf-next" role="region" aria-label="{label}"><span class="nx" aria-hidden="true">\u2192</span>'
+         f'<div><b>{label}</b><span>{esc(text)}</span></div></div>')
+    if current_page_index() != step.page:
+        st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,))
+
+
+def page_nav(index: int) -> None:
+    """Back / Next at the bottom of a page: the way on, also on a phone where the sidebar is hidden."""
+    st.divider()
+    left, right = st.columns(2)
+    if index > 0:
+        left.button(f"\u2190 {t(PAGES[index - 1])}", key=f"nav-back-{index}", on_click=go_to, args=(index - 1,))
+    if index < len(PAGES) - 1:
+        right.button(f"{t(PAGES[index + 1])} \u2192", key=f"nav-next-{index}", on_click=go_to, args=(index + 1,))
+
+
+def privacy_panel() -> None:
+    """One place that says who can see what (privacy is the main trust question)."""
+    cx = ctx()
+    own = ("Only you, after you enter your access code." if cx.protected else
+           "Only you (in this demo anyone can switch member, so it is synthetic data).")
+    rows = [("Your answers, scores and feedback", own),
+            ("Team coverage and the exports", "Everyone in the team, as counts only: no names, answers or scores."),
+            ("A teaching session", "Only the mentor and the learner until both accept; then the team sees that it exists."),
+            ("Answers the model could not score", "A reviewer, and only if you agreed; never with your name."),
+            ("The action log", "Shared project steps and your own steps; never another member's answers.")]
+    body = "".join(f"<tr><th scope='row'>{esc(t(a))}</th><td>{esc(t(b))}</td></tr>" for a, b in rows)
+    with st.expander(t("Who can see what?")):
+        show(f'<table class="bf-who">{body}</table>')
+
+
+def draft_box(key: str, label: str, height: int = 110) -> str:
+    """A text area whose draft survives moving to another page (widget state is dropped when a page is left)."""
+    drafts = st.session_state.setdefault("drafts", {})
+    if key not in st.session_state and key in drafts:
+        st.session_state[key] = drafts[key]
+
+    def save() -> None:
+        drafts[key] = st.session_state.get(key, "")
+
+    text = st.text_area(label, height=height, key=key, on_change=save)
+    st.caption(t("Your draft is saved while you move around. After you send it, you cannot edit it."))
+    return text
+
+
+def clear_draft(key: str) -> None:
+    st.session_state.get("drafts", {}).pop(key, None)
+
+
+ACTION_TEXT = {
+    "seed_demo": "The synthetic demo was loaded.",
+    "create_project": "A project was created.",
+    "add_member": "A member was added to the project.",
+    "add_decision": "A decision card was added.",
+    "confirm_card": "A decision card was confirmed.",
+    "access_codes_issued": "Access codes were issued.",
+    "add_course_material": "Course material was added.",
+    "update_consent": "Your consent choices were saved.",
+    "start_check.select_decisions": "Decisions were chosen for your private check.",
+    "start_check.create_interview": "A question was prepared for you.",
+    "start_check.abstain": "A decision was skipped: it is not confirmed or has no source.",
+    "start_check.skip": "A decision was skipped: nothing new to ask.",
+    "start_owner_check.create_interview": "A question on your own decision was prepared.",
+    "submit_answer.evaluate_answer": "Your answer was recorded and assessed.",
+    "submit_answer.answer_request": "A request for the answer was handled (no answer given in a check).",
+    "submit_answer.flagged_instructions": "An answer addressed to the grader was not scored.",
+    "propose_missions.recommend_missions": "Teaching sessions were worked out from the coverage.",
+    "propose_missions.save": "Teaching sessions were saved.",
+    "accept_mission": "Someone agreed to take part in a teaching session.",
+    "mission_accepted": "Both people agreed to a teaching session.",
+    "session_progress": "Steps of a teaching session were ticked off.",
+    "start_retest.create_transfer_test": "A new retest question was prepared.",
+    "submit_retest.evaluate_answer": "A retest answer was recorded and assessed.",
+    "submit_retest.apply_retest": "The retest result was applied to the mission.",
+    "submit_retest.blocked_answer_request": "A request for the answer was refused in the retest.",
+    "submit_retest.flagged_instructions": "A retest answer addressed to the grader was not scored.",
+    "start_followup": "A follow-up question was opened.",
+    "start_simulator": "A defense-simulator question was prepared.",
+    "submit_simulator.evaluate_answer": "A simulator answer was recorded (practice only).",
+    "submit_simulator.blocked_answer_request": "A request for the answer was refused in the simulator.",
+    "submit_simulator.flagged_instructions": "A simulator answer addressed to the grader was not scored.",
+    "human_review": "A reviewer scored an answer.",
+    "coverage_snapshot": "Team coverage was recorded.",
+}
+
+
+def humanize_action(action: str) -> str:
+    """The action name as a plain sentence (unknown names fall back to a readable form)."""
+    text = ACTION_TEXT.get(action)
+    if text is None:
+        text = action.replace(".", " \u2192 ").replace("_", " ").capitalize() + "."
+    return t(text)

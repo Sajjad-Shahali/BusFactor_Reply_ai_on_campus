@@ -131,6 +131,9 @@ class TeachingMission(BaseModel):
     accepted_at: Optional[datetime] = None   # when both people agreed (drives the reminder)
     verified_at: Optional[datetime] = None   # when the retest was passed (drives the follow-up check)
     followup_done: bool = False              # the spaced follow-up check was already started
+    steps_done: list[int] = []               # which of the 4 teaching steps the pair has ticked off
+    session_done: bool = False               # the teaching session happened (all steps ticked); unlocks the retest
+    session_done_at: Optional[datetime] = None
 
 
 class DecisionCoverage(BaseModel):

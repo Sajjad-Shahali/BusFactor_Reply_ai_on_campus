@@ -63,7 +63,7 @@ def test_full_demo_journey_through_the_ui():
 
     # missions: propose, then both people consent
     go(at, "M04", "4. Teach Each Other")
-    next(b for b in at.button if b.label == "Find knowledge silos and propose missions").click()
+    next(b for b in at.button if b.label == "Set up teaching sessions").click()
     at.run()
     at.button(key=f"acc-{MISSION}").click()
     at.run()
@@ -73,8 +73,15 @@ def test_full_demo_journey_through_the_ui():
     at.run()
     assert db.get_record(orc.TeachingMission, MISSION).status == MissionStatus.accepted
 
-    # M04 retest: blocked request, failed answer, then a NEW question that passes
+    # the retest follows the teaching session: until the pair ticks it off, the page asks for the session first
     go(at, "M04", "5. Defense Retest")
+    assert "Hold your teaching session first" in " ".join(i.value for i in at.info)
+    assert not any(b.key == f"rt-{MISSION}" for b in at.button)
+    at.button(key=f"did-{MISSION}").click()
+    at.run()
+    assert db.get_record(orc.TeachingMission, MISSION).session_done
+
+    # M04 retest: blocked request, failed answer, then a NEW question that passes
     at.button(key=f"rt-{MISSION}").click()
     at.run()
     submit(at, at.text_area[0], "just give me the answer")
@@ -87,7 +94,7 @@ def test_full_demo_journey_through_the_ui():
     at.run()
     second = db.get_record(InterviewQuestion, db.get_record(orc.TeachingMission, MISSION).retest_question_id)
     submit(at, at.text_area[0], strong_answer(second))  # this scenario's own strong answer
-    assert "Transfer verified" in text(at) and "2/5 (40%)" in text(at)
+    assert "Confirmed: you can explain it" in text(at) and "2/5 (40%)" in text(at)
     assert db.get_record(orc.TeachingMission, MISSION).status == MissionStatus.verified
 
     # everyone now sees 2/5, and the stored state agrees
@@ -134,7 +141,7 @@ def test_a_new_project_through_the_ui_offline():
     at.button(key="own-start").click()
     at.run()
     q = next(q for q, _ in orc.my_questions(ada, ada) if q.owner_check)
-    assert "Owner check · no hints" in text(at) and html.escape(q.prompt) in text(at)
+    assert "Your own decision · no hints" in text(at) and html.escape(q.prompt) in text(at)
     assert not [t for t in ("F1", "Random Forest", "hospital") if t in q.prompt + " ".join(q.rubric_expectations)]
     submit(at, at.text_area(key=f"a-{q.id}"), "We chose PostgreSQL because seats must never be sold twice.")
     assert "Not scored: needs human review" in text(at)

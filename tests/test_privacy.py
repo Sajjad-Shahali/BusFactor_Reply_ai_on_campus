@@ -228,6 +228,6 @@ def test_missions_page_hides_a_failed_retest_from_others(app):
     orc.submit_retest(m.id, "I am not sure.", "M04")
     page = "4. Teach Each Other"
     outsider = " ".join(md.value for md in app("M01", page).markdown)
-    assert "Retest not passed yet" not in outsider and "Accepted" in outsider
+    assert "Retest: try again" not in outsider and "Accepted" in outsider
     learner = " ".join(md.value for md in app("M04", page).markdown)
-    assert "Retest not passed yet" in learner
+    assert "Retest: try again" in learner

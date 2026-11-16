@@ -14,8 +14,7 @@ from ui.theme import (
     CARD_PILL,
 )
 from ui.widgets import (
-    dlabel, empty_state, esc, page_header,
-    pill, quote_block, remember_codes, show, show_issued_codes,
+    dlabel, empty_state, esc, page_header, page_nav, pill, quote_block, remember_codes, show, show_issued_codes,
 )
 
 
@@ -127,7 +126,8 @@ def render() -> None:
                 if not cx.cards:
                     if st.button("Propose decisions with the live model", disabled=not llm_available()):
                         try:
-                            orc.extract_project_decisions(actor=cx.viewer or "agent")
+                            with st.spinner(t("Reading your report with the model… this can take a minute.")):
+                                orc.extract_project_decisions(actor=cx.viewer or "agent")
                             st.rerun()
                         except (LLMUnavailable, ValueError) as err:
                             st.error(str(err))
@@ -201,3 +201,5 @@ def render() -> None:
             if st.button(t("Delete project"), disabled=typed.strip() != p.title):
                 orc.delete_project(p.id, typed, actor=cx.viewer or "agent")
                 st.rerun()
+
+    page_nav(1)

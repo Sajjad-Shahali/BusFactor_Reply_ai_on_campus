@@ -12,7 +12,7 @@ from ui.theme import (
     COVERAGE_PILL, HERO_TEXT, HERO_TITLE,
 )
 from ui.widgets import (
-    dlabel, esc, knowledge_map, show,
+    dlabel, esc, go_to, knowledge_map, next_step_card, page_nav, pill, show,
 )
 
 
@@ -36,7 +36,7 @@ def render() -> None:
         (t("Decision coverage"), f"{report.numerator}/{report.denominator}" if report.denominator else "–",
          t("<b>+{n}</b> since start").format(n=gained) if gained > 0
          else t("started at {a}/{b}").format(a=base["numerator"], b=base["denominator"])),
-        (t("Single points of failure"), str(len(report.spof_decision_ids)),
+        (t("Decisions only 1 person can explain"), str(len(report.spof_decision_ids)),
          t("<b>−{n}</b> since start").format(n=spof_drop) if spof_drop > 0
          else t('<b class="bad">need a second explainer</b>')),
         (t("Teaching missions"), str(len(accepted)),
@@ -51,10 +51,17 @@ def render() -> None:
          f'<p>{esc(t(HERO_TEXT))}</p>'
          f'<div class="bf-kpis">{tiles}</div></div>')
 
-    knowledge_map(report, improved)
-    text_map = "; ".join(f"{dlabel(c.decision_id)}: {t(COVERAGE_PILL[c.status][0])} ({len(c.demonstrated_by)})"
-                         for c in report.per_decision)
-    show(f'<div class="bf-muted" role="note">{esc(t("Text version of the map"))}: {esc(text_map)}</div>')
+    next_step_card()
+    if orc.is_demo_project():
+        st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,))
+    rows = "".join(
+        f'<li><span class="t">{esc(dlabel(c.decision_id))} \u00b7 {esc(cx.cards[c.decision_id].title)}</span>'
+        f'{pill(*COVERAGE_PILL[c.status])}<span class="c">{esc(t("{n} can explain it").format(n=len(c.demonstrated_by)))}</span></li>'
+        for c in report.per_decision)
+    st.subheader(t("Decisions at a glance"))
+    show(f'<ul class="bf-list">{rows}</ul>')
+    if st.toggle(t("Show the 3D map (optional)"), key="show-map"):
+        knowledge_map(report, improved)
 
     steps = [
         (t("Find the decisions"), verified_cards > 0,
@@ -81,3 +88,5 @@ def render() -> None:
     show('<div class="bf-muted">' + t("All numbers come from the synthetic demo data and update live as you use "
                                       "the app." if orc.is_demo_project() else
                                       "All numbers come from this project's stored, consented evidence.") + '</div>')
+
+    page_nav(0)
