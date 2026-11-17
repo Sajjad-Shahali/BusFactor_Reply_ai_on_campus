@@ -1,4 +1,5 @@
 """Theme: page names, status labels, CSS and the brand mark."""
+from ui import palettes
 HERO_TITLE = "You split the work.<br><em>Don't split the understanding.</em>"
 HERO_TEXT = ("BusFactor finds the project decisions only one teammate can explain, sets up peer teaching between "
              "teammates, and checks with a new question that the knowledge really moved.")
@@ -22,7 +23,7 @@ EVIDENCE_PILL = {"demonstrated": ("Demonstrated", "green"), "needs_practice": ("
                  "insufficient_evidence": ("Not scored: needs human review", "gray")}
 
 
-CSS = """
+_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 :root {
@@ -38,7 +39,7 @@ CSS = """
 .stApp, .stApp p, .stApp li, .stApp label, .stApp input, .stApp textarea, .stApp button, .stApp td, .stApp th {
   font-family: var(--bf-body);
 }
-.block-container { padding-top: 3.2rem; padding-bottom: 4rem; max-width: 1080px; }
+.block-container { padding-top: 1.6rem; padding-bottom: 4rem; max-width: 1080px; }
 .stApp h1, .stApp h2, .stApp h3 { font-family: var(--bf-display); color: var(--bf-fg); letter-spacing: -0.02em; }
 .stApp h1 { font-size: 2.35rem !important; font-weight: 700; line-height: 1.08; padding-bottom: 0.2rem; }
 .stApp h2 { font-size: 1.35rem !important; font-weight: 700; }
@@ -46,6 +47,8 @@ CSS = """
 
 /* quiet Streamlit chrome for the demo */
 header[data-testid="stHeader"] { background: transparent; }
+[data-testid="stSidebarHeader"] { min-height: 0; height: 2.2rem; padding: .3rem .6rem 0; margin: 0; }
+[data-testid="stSidebarUserContent"] { padding-top: .2rem; }
 .stAppDeployButton, [data-testid="stToolbarActions"], #MainMenu, footer { display: none !important; }
 
 /* sidebar */
@@ -364,7 +367,7 @@ button:focus-visible, [role="tab"]:focus-visible, summary:focus-visible { outlin
 
 /* phones */
 @media (max-width: 700px) {
-  .block-container { padding-left: 1rem; padding-right: 1rem; padding-top: 2.2rem; }
+  .block-container { padding-left: 1rem; padding-right: 1rem; padding-top: 1.4rem; }
   [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: .6rem !important; }
   [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { min-width: 100% !important; flex: 1 1 100% !important; }
   .bf-stepper { gap: 5px; } .bf-stepper i { display: none; } .bf-st { font-size: .72rem; }
@@ -392,13 +395,26 @@ button:focus-visible, [role="tab"]:focus-visible, summary:focus-visible { outlin
 .bf-list li .t { flex: 1; min-width: 0; } .bf-list li .c { color: #A9B2D6; font-size: .86rem; white-space: nowrap; }
 .bf-pstats .v.small { font-size: 1.35rem; line-height: 1.25; }
 .bf-stepper { cursor: default; }
+/* sidebar groups are plain: no card, border or hover lift around the navigation and the other sidebar widgets */
+[data-testid="stSidebar"] [data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"],
+[data-testid="stSidebar"] [data-testid="stLayoutWrapper"] > [data-testid="stVerticalBlock"]:hover {
+  background: transparent !important; border: 0 !important; box-shadow: none !important; transform: none !important;
+  backdrop-filter: none !important; transition: none; }
+[data-testid="stSidebar"] [role="radiogroup"] { padding: 2px 4px; }
+[data-testid="stHtml"]:has(#bf-tour-loader) { display: none; }   /* the tour's loader takes no room */
 @media (max-width: 700px) { .bf-list li { flex-wrap: wrap; } .bf-who th { width: 40%; } }
 </style>
 """
 
-BRAND = """<div class="bf-brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+_BRAND = """<div class="bf-brand"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <circle cx="5" cy="6" r="2.4" fill="currentColor"/><circle cx="19" cy="6" r="2.4" fill="currentColor"/>
 <circle cx="5" cy="18" r="2.4" fill="currentColor"/><circle cx="19" cy="18" r="2.4" fill="currentColor"/>
 <path d="M12 8.5 15.5 12 12 15.5 8.5 12Z" fill="#2F4FD8"/>
 <path d="M7 7.3 10 10.3M17 7.3 14 10.3M7 16.7l3-3M17 16.7l-3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
 </svg>BusFactor</div>"""
+
+# the active palette (BUSFACTOR_PALETTE) is applied once; status colours keep their meaning in every palette
+# a flat palette's overrides go INSIDE the <style> block (after the rules they replace)
+_sheet = palettes.recolor(_CSS)
+CSS = _sheet.replace("</style>", palettes.overrides() + "</style>") if palettes.overrides() else _sheet
+BRAND = palettes.recolor(_BRAND)

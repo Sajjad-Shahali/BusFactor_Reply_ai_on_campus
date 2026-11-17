@@ -107,11 +107,9 @@ In the demo, coverage starts at **1/5**. Member B teaches Member D why the team 
 | Who can see what | One panel on the main pages says exactly who sees answers, coverage, sessions, reviews and the log. |
 | English and Italian interface | Switch in the sidebar; the page you are on and your identity are kept. |
 | Offline demo mode | Runs with no API key on synthetic data. |
-<<<<<<< Updated upstream
-=======
+| Guided tutorial | A small 3D robot walks around the app, switches pages for you and writes the help for each step in a thought cloud. Start it from the sidebar. |
 | Connect a model | Claude, OpenAI/Codex models, a local model, or the Claude Code / Codex tools already installed on your computer, connected from the sidebar for one browser session. The model then writes the questions and retest scenarios and scores answers. |
 | Quick quiz | Five model-written questions in a row in the Defense simulator; practice only. |
->>>>>>> Stashed changes
 | Docker image | `docker compose up` and open <http://localhost:8501>. |
 
 ## Screenshots
@@ -165,7 +163,7 @@ docker compose up --build
 Open <http://localhost:8501>. The database and uploaded documents live in the `busfactor-data` volume, so they survive restarts. Demo mode is the default; for the live model:
 
 ```bash
-DEMO_MODE=false LLM_API_KEY=sk-... docker compose up --build
+DEMO_MODE=false LLM_API_KEY=sk-... docker compose up --build      # or connect a model from the sidebar instead
 ```
 
 Without compose: `docker build -t busfactor . && docker run -p 8501:8501 -v busfactor-data:/data busfactor`.
@@ -179,23 +177,19 @@ Settings live in `.env` (copy it from `.env.example`; never commit it).
 | Variable | Default | Meaning |
 |---|---|---|
 | `DEMO_MODE` | `true` | `true`: offline, no model calls, answers scored by a fixed keyword rubric. `false`: use the live model. |
-<<<<<<< Updated upstream
-| `LLM_API_KEY` | empty | Anthropic API key, needed only when `DEMO_MODE=false`. |
-=======
 | `LLM_PROVIDER` | `anthropic` | `anthropic` (Claude), `openai` (OpenAI, Codex models, or any OpenAI-compatible / local endpoint), or `claude-cli` / `codex-cli` (the installed tools, needs `BUSFACTOR_ENABLE_LOCAL_CLI=true`). |
 | `BUSFACTOR_ENABLE_LOCAL_CLI` | `false` | Allow the command-line providers. They run a program as the user who started the server: your own computer only. |
 | `LLM_API_KEY` | empty | API key for a server-wide model, needed only when `DEMO_MODE=false`. A local model needs none. |
 | `LLM_BASE_URL` | empty | `openai` provider only: the endpoint, for example `http://localhost:11434/v1` for Ollama. |
 | `BUSFACTOR_ALLOW_PRIVATE_LLM_URLS` | `false` | Allow a model on a private network. Link-local and cloud-metadata addresses stay blocked. |
 | `BUSFACTOR_PALETTE` | `brass` | Colour palette: `brass` (default), `classic`, `forest`, `teal`, `rose`, or the flat `mono`, `bordeaux`, `olive`, `slate` (see [Colour palettes](#colour-palettes)). |
->>>>>>> Stashed changes
 | `LLM_MODEL` | `claude-opus-5-5` | Model used for extracting decisions, writing questions and grading answers. |
 | `BUSFACTOR_DB` | `busfactor.db` in the repo root | Optional path to the SQLite database. |
 | `BUSFACTOR_UPLOADS` | `uploads/` in the repo root | Optional folder for uploaded project documents. |
 | `BUSFACTOR_REMINDER_DAYS` | `2` | Days an accepted mission can sit idle before both people are reminded. |
 | `BUSFACTOR_FOLLOWUP_DAYS` | `3` | Days after a passed retest before the follow-up question opens. |
 
-> With `DEMO_MODE=false`, the project text and the students' answers are sent to the API. Only use files you are allowed to share and members who agreed to take part.
+> With a model connected (from the sidebar or with `DEMO_MODE=false`), the project text and the students' answers are sent to the provider. Only use files you are allowed to share and members who agreed to take part.
 
 ## Using it for your own project
 
@@ -220,8 +214,24 @@ The demo is a fictional team, so it has no sign-in: "Who are you?" is a dropdown
 - **Keep me signed in** (optional, per member) adds a signed token to the page link for 7 days so the code is not retyped on a refresh. Anyone who has that link can open that member's answers until it expires, so it must not be shared; **Sign out** removes it. Tokens are bound to one member and signed with a server secret.
 - Projects created without codes (for example by script) keep the dropdown. **Project Setup → Access codes** turns them on, or issues new codes (which signs everyone out).
 
-<<<<<<< Updated upstream
-=======
+## Guided tutorial
+
+Not sure what to press first? Click **Start the tutorial** in the sidebar (or **Take the 2-minute tutorial** on the Overview).
+A small 3D robot called Bus walks to each part of the app, highlights it, **switches to the next page by itself** and writes
+the help in a thought cloud above its head: pick a project, pick who you are, the six pages, "Your next step", the four
+numbers, then each page in turn and, last, the optional model connection. 16 short steps, about two minutes.
+
+![The tutorial robot](docs/screenshots/16_tutorial_robot.png)
+
+- **Controls:** Next / Back / Skip tour in the cloud, the arrow keys, Esc to leave. It is available in English and Italian.
+- **How it is built:** pure CSS 3D (no library) in `web/tutorial.js`, started by `ui/tutorial.py` only while the tour is on. The
+  steps point at parts of the page by CSS selector or by a button's text; if something is not on screen the robot says the
+  step from the middle of the page, so it never gets stuck. Help text is inserted as plain text, never as HTML.
+- **Accessibility:** the cloud is a labelled dialog with keyboard control, and users who prefer reduced motion get no walking
+  or bobbing animation (the robot just appears at each step).
+
+![Tutorial walk-through](docs/tutorial.gif)
+
 ## Connect a model
 
 Without a model the app is a demo: questions come from the synthetic bank and scoring is a keyword rubric. To use a real
@@ -300,7 +310,6 @@ every button fill and accent and muted text on every background are at least 4.5
 
 "Flat" palettes switch off every gradient, glow and grid texture and use solid colours only.
 
->>>>>>> Stashed changes
 ## Interface language
 
 Pick **English** or **Italiano** at the top of the sidebar (or open the app with `?lang=it`). The page you are on, your project and your identity are kept when you switch. Only the interface is translated: decision cards, questions and feedback stay in the language of the documents, the demo data or the model, and answers can be written in any language. Some explanatory sentences produced by the coverage and mission logic are still English.
@@ -356,11 +365,7 @@ docs/               README screenshots, demo GIF, CALIBRATION.md, PILOT_PROTOCOL
 Dockerfile, docker-compose.yml, pyproject.toml (ruff, mypy, coverage), .github/workflows/tests.yml
 ```
 
-<<<<<<< Updated upstream
-Built with Python 3.11+, Streamlit, Pydantic 2, SQLite, pdfplumber, reportlab, the Anthropic SDK and pytest.
-=======
 Built with Python 3.11+, Streamlit, Pydantic 2, SQLite, pdfplumber, reportlab, the Anthropic SDK (for Claude), plain HTTPS for OpenAI-compatible models, local subprocess calls for the optional CLI providers, and pytest.
->>>>>>> Stashed changes
 
 ## Guarantees enforced in code
 
@@ -399,11 +404,7 @@ Numbers below are what the repository measures today. None of them is a validati
 
 | Check | Result |
 |---|---|
-<<<<<<< Updated upstream
-| Automated tests | 303 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
-=======
-| Automated tests | 397 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
->>>>>>> Stashed changes
+| Automated tests | 413 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
 | Lint and types | `ruff` and `mypy` run clean in CI on Python 3.11 and 3.12 |
 | Answer-request guard | 38/38 adversarial cases blocked (paraphrases, Italian/French/Spanish/German, spelling tricks, look-alike letters) |
 | Prompt-injection guard | 37/37 adversarial cases blocked (role changes, score demands, JSON, other languages, spacing tricks) |
@@ -459,11 +460,7 @@ python -m ruff check .        # lint
 python -m mypy                # types
 ```
 
-<<<<<<< Updated upstream
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 303 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
-=======
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 397 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
->>>>>>> Stashed changes
+The tests run offline: the model is replaced by a deterministic fake. At the last run, 413 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
 
 ## Limitations
 
@@ -476,11 +473,8 @@ The tests run offline: the model is replaced by a deterministic fake. At the las
 - The open project is one setting shared by everyone using the same server; two people switching projects at the same moment can briefly see each other's choice. Run one instance per team.
 - Uploaded documents are stored as plain files in `uploads/<project id>/` on the machine running the app, and the database (`busfactor.db`) holds answers in plain text. Deleting a project removes its documents and records.
 - The live model's grading has not been calibrated against human graders yet. The code checks that its output is consistent and abstains when it is not, but a consistent grade can still be wrong.
-<<<<<<< Updated upstream
-=======
 - A model connected for a session keeps its key in the server's memory for that session; on a shared or public deployment that is only as private as the server. Questions and scores written by a model can be wrong or badly worded, and calls cost money on the provider's side. The base-URL check does not stop DNS-rebinding tricks.
 - The Claude Code / Codex providers are experimental and meant for one person on their own computer. Codex's read-only sandbox does not stop it reading files; Claude Code runs with tools off. They are slower (a process per request) and their output format can change between versions.
->>>>>>> Stashed changes
 - Injection detection uses patterns (English and Italian). A cleverly worded attempt can get past it; the model is also told to report instructions in the answer, and a 2 must agree with its own point-by-point judgement.
 - The offline keyword rubric exists only for the synthetic demo and only for English (plus a few Italian words).
 - Only the interface is translated into Italian. Some explanatory sentences from the coverage logic are English, and the report export is English.

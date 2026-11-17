@@ -7,6 +7,7 @@ import streamlit as st
 from busfactor import orchestrator as orc
 from busfactor.i18n import t
 from busfactor.models import MissionStatus, ReviewStatus
+from ui import tutorial
 from ui.state import ctx
 from ui.theme import (
     COVERAGE_PILL, HERO_TEXT, HERO_TITLE,
@@ -51,6 +52,7 @@ def render() -> None:
          f'<p>{esc(t(HERO_TEXT))}</p>'
          f'<div class="bf-kpis">{tiles}</div></div>')
 
+    tutorial.tour_button("page")
     next_step_card()
     if orc.is_demo_project():
         st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,))

@@ -1,7 +1,6 @@
 """Page 5: independent retest, follow-up and the defense simulator."""
 from __future__ import annotations
 
-
 import streamlit as st
 
 from busfactor import orchestrator as orc
@@ -12,8 +11,25 @@ from ui.theme import (
     EVIDENCE_PILL, MISSION_PILL, PAGES,
 )
 from ui.widgets import (
-    LOCK_SVG, clear_draft, coverage_text, dlabel, draft_box, empty_state, esc, go_to, need_viewer, next_step_card, page_header, page_nav, pill, show, show_reminders, win,
+    source_chip, LOCK_SVG, clear_draft, coverage_text, dlabel, draft_box, empty_state, esc, go_to, need_viewer, next_step_card, page_header, page_nav, pill, show, show_reminders, win,
 )
+
+
+QUIZ_LENGTH = 5
+
+
+def quiz_summary(quiz: dict, history: list) -> None:
+    """How the last quiz went. Practice only: it never changes coverage."""
+    by_id = {q.id: ev for q, ev in history}
+    scored = [by_id[i] for i in quiz["ids"] if by_id.get(i) is not None]
+    strong = sum(e.rubric_score == 2 for e in scored)
+    partial = sum(e.rubric_score == 1 for e in scored)
+    review = sum(e.status.value == "insufficient_evidence" for e in scored)
+    st.success(t("Quiz finished: {a} strong, {b} partly there, {c} not yet, out of {n}.").format(
+        a=strong, b=partial, c=len(scored) - strong - partial - review, n=len(scored)))
+    if review:
+        st.info(t("{n} answer(s) could not be scored automatically and wait for human review.").format(n=review))
+    st.caption(t("A quiz is practice only: it never changes team coverage."))
 
 
 def render() -> None:
@@ -87,6 +103,7 @@ def render() -> None:
             if q.scenario:
                 show(f'<div class="bf-muted">{esc(t("New situation"))}: {esc(q.scenario)}</div>')
             show(f'<div class="bf-question">{esc(q.prompt)}</div>')
+            show(source_chip(q))
             answer = draft_box(f"retest-{m.id}", t("Your answer"), 130)
             if st.button(t("Submit"), type="primary", key=f"retest-submit-{m.id}"):
                 with st.spinner(t("Checking your answer…")):
@@ -115,20 +132,36 @@ def render() -> None:
     else:
         sim_open = orc.open_simulator_question(cx.viewer)
         sim_done = [(q, ev) for q, ev in orc.simulator_history(cx.viewer) if ev is not None]
+        quiz = st.session_state.get("quiz")
         if sim_open is None:
-            if st.button(t("Ask me a question"), key="sim-start"):
+            if quiz and len(quiz["ids"]) >= quiz["total"]:
+                quiz_summary(quiz, sim_done)
+            first, second = st.columns(2)
+            if first.button(t("Ask me a question"), key="sim-start"):
+                st.session_state.pop("quiz", None)
                 try:
                     with st.spinner(t("Preparing a question…")):
                         orc.start_simulator(cx.viewer)
                     st.rerun()
                 except ValueError as err:   # every scenario was practised
                     st.warning(str(err))
+            if second.button(t("Start a {n}-question quiz").format(n=QUIZ_LENGTH), key="quiz-start"):
+                try:
+                    with st.spinner(t("Preparing a question…")):
+                        q = orc.start_simulator(cx.viewer)
+                    st.session_state["quiz"] = {"total": QUIZ_LENGTH, "ids": [q.id]}
+                    st.rerun()
+                except ValueError as err:
+                    st.warning(str(err))
         else:
+            if quiz and sim_open.id in quiz["ids"]:
+                show(f'<div class="bf-muted">{esc(t("Quiz: question {n} of {m}").format(n=quiz["ids"].index(sim_open.id) + 1, m=quiz["total"]))}</div>')
             show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-muted">{esc(dlabel(sim_open.decision_id))} · {esc(cx.cards[sim_open.decision_id].title)}</span></div>')
             if sim_open.scenario:
                 show(f'<div class="bf-muted">{esc(t("New situation"))}: {esc(sim_open.scenario)}</div>')
             show(f'<div class="bf-question">{esc(sim_open.prompt)}</div>')
+            show(source_chip(sim_open))
             sim_answer = draft_box("sim-answer", t("Your answer"), 120)
             if st.button(t("Send answer"), type="primary", key="sim-send"):
                 with st.spinner(t("Checking your answer…")):
@@ -137,6 +170,12 @@ def render() -> None:
                     st.error(res.message)
                 else:
                     clear_draft("sim-answer")
+                    if quiz and sim_open.id in quiz["ids"] and len(quiz["ids"]) < quiz["total"]:
+                        try:   # the next quiz question follows straight away
+                            with st.spinner(t("Preparing a question…")):
+                                quiz["ids"].append(orc.start_simulator(cx.viewer).id)
+                        except ValueError:
+                            quiz["total"] = len(quiz["ids"])   # nothing new is left: the quiz ends early
                     st.rerun()
         if sim_done:
             last_q, last_ev = sim_done[-1]

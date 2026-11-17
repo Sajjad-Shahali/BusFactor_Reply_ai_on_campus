@@ -181,6 +181,9 @@ def test_the_sidebar_offers_a_cli_provider_without_a_key_field(monkeypatch):
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
     at.run()
     assert any("Claude Code on this computer" in o for o in at.sidebar.selectbox(key="llm-provider").options)
+    assert at.sidebar.selectbox(key="llm-provider").value == "claude-cli"              # installed tool is offered first
+    at.sidebar.selectbox(key="llm-provider").set_value("anthropic")
+    at.run()
     assert any(t.key == "llm-key" for t in at.sidebar.text_input)                      # an API provider still asks for a key
     at.sidebar.selectbox(key="llm-provider").set_value("claude-cli")
     at.run()
@@ -201,3 +204,16 @@ def test_codex_shows_the_file_reading_warning(monkeypatch):
     at.sidebar.selectbox(key="llm-provider").set_value("codex-cli")
     at.run()
     assert any("can still read files" in w.value for w in at.sidebar.warning)
+
+
+def test_the_panel_explains_how_to_unlock_an_installed_tool_and_prefers_it_once_enabled(monkeypatch):
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
+    at.run()
+    assert any("BUSFACTOR_ENABLE_LOCAL_CLI=true" in i.value for i in at.sidebar.info)         # installed but switched off: say how
+    assert not any("CLI" in o and "computer" in o for o in at.sidebar.selectbox(key="llm-provider").options)
+    monkeypatch.setenv("BUSFACTOR_ENABLE_LOCAL_CLI", "true")
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
+    at.run()
+    assert at.sidebar.selectbox(key="llm-provider").value == "claude-cli"                      # offered first: no key needed
+    assert any("no key needed" in c.value for c in at.sidebar.caption)
+    assert not any(t.key == "llm-key" for t in at.sidebar.text_input)

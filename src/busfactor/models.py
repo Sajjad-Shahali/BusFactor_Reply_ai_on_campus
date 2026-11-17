@@ -3,16 +3,20 @@
 # unit tests, the database refuses to store it), explicit opt-in consent (defaults False),
 # owner_check / scenario on questions (independent owner verification and scenario-specific transfer).
 from __future__ import annotations
+
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
+
 
 def utcnow() -> datetime:
     """Naive UTC timestamp (datetime.utcnow() is deprecated)."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+QuestionSource = Literal["model", "demo_bank", "template"]
 DEMO_PROJECT_ID = "P01"   # the synthetic demo; its fixed ids D01-D05 / M01-M04 exist only in this project
 
 
@@ -96,6 +100,7 @@ class InterviewQuestion(BaseModel):
     project_id: Optional[str] = None
     owner_check: bool = False                # independent check of a decision's declared owner
     scenario: Optional[str] = None           # transfer only: the condition that changed
+    source: QuestionSource = "template"      # who wrote it: the connected model, the synthetic demo bank, or a fixed template
 
 
 class AssessmentEvidence(BaseModel):

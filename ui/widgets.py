@@ -11,9 +11,11 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from busfactor import llm_provider
 from busfactor import orchestrator as orc
 from busfactor.i18n import t
 from busfactor.models import MissionStatus
+from ui import palettes
 from ui.state import ctx
 from ui.theme import PAGES
 
@@ -105,7 +107,7 @@ def pill(label: str, kind: str) -> str:
     return f'<span class="bf-pill bf-{kind}"{title}>{icon}{esc(t(label))}</span>'
 
 
-MEMBER_COLORS = ["#4F6BFF", "#14B8A6", "#F59E0B", "#D946EF", "#38BDF8", "#F87171"]
+MEMBER_COLORS = [palettes.color("#4F6BFF"), "#14B8A6", "#F59E0B", "#D946EF", "#38BDF8", "#F87171"]
 
 
 def avatar(member_id: str, size: int = 34) -> str:
@@ -141,7 +143,7 @@ def ring(num: int, den: int, base_num: int) -> str:
     label = (f"<b>{num}/{den}</b><span>{frac:.0%} {t('covered')}</span>" if den
              else f"<b>–</b><span>{t('not measurable')}</span>")
     return (f'<div class="bf-ring" role="img" aria-label="{num}/{den}"><svg viewBox="0 0 160 160" aria-hidden="true"><defs>'
-            f'<linearGradient id="bfg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7189FF"/>'
+            f'<linearGradient id="bfg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{palettes.color("#7189FF")}"/>'
             f'<stop offset="1" stop-color="#2BD99F"/></linearGradient></defs>'
             f'<circle cx="80" cy="80" r="62" class="trk"/>'
             f'<circle cx="80" cy="80" r="62" class="val" style="stroke-dasharray:{circ:.1f};--from:{start:.1f};'
@@ -219,7 +221,7 @@ def _three_tag() -> str:
 def knowledge_map(report, improved: list[str], height: int = 470) -> None:
     """3D map: one node per decision, one orbiting light per person who can explain it. Counts only."""
     cx = ctx()
-    template = (ROOT / "web" / "knowledge_map.html").read_text(encoding="utf-8")
+    template = palettes.recolor((ROOT / "web" / "knowledge_map.html").read_text(encoding="utf-8"))
     nodes = [{"id": c.decision_id, "title": cx.cards[c.decision_id].title, "n": len(c.demonstrated_by), "status": c.status}
              for c in report.per_decision]
     data = json.dumps({"nodes": nodes, "improved": improved}).replace("</", "<\\/")
@@ -340,8 +342,6 @@ def humanize_action(action: str) -> str:
     if text is None:
         text = action.replace(".", " \u2192 ").replace("_", " ").capitalize() + "."
     return t(text)
-<<<<<<< Updated upstream
-=======
 
 
 
@@ -376,6 +376,21 @@ def _disconnect_model() -> None:
     st.session_state.pop("llm-msg", None)
 
 
+def model_status() -> None:
+    """Always-visible switch at the top of the sidebar: while a model is connected, one click stops using it.
+
+    Disconnecting drops the connection from this session at once, so no further call is made (a call already running
+    cannot be recalled, but its answer is the last one). The questions then fall back to the fixed templates.
+    """
+    cfg = llm_provider.get_session_config()
+    if not cfg:
+        return
+    st.markdown(f'<div class="bf-muted">● {esc(t("Model on: {m}").format(m=cfg.label))}</div>', unsafe_allow_html=True)
+    st.button(t("Stop the model"), key="llm-stop", on_click=_disconnect_model, type="primary", width="stretch",
+              icon=":material/stop_circle:", help=t("Disconnects the model now. No more calls are sent; questions fall "
+                                                   "back to the fixed templates."))
+
+
 def model_panel() -> None:
     """Connect Claude, OpenAI/Codex or a local OpenAI-compatible model for THIS browser session.
 
@@ -393,6 +408,13 @@ def model_panel() -> None:
         if env:
             st.caption(t("The server already has a model configured: {m}").format(m=env.label))
         options = llm_provider.available_providers()
+        installed = [p for p in llm_provider.CLI_PROVIDERS if llm_provider.cli_executable(p)]
+        if installed and not llm_provider.local_cli_enabled():
+            st.info(t("Claude Code or Codex is installed on this computer. To use it without a key, start the app with "
+                      "BUSFACTOR_ENABLE_LOCAL_CLI=true (your own computer only)."))
+        elif installed:   # no key needed: offer the installed tool first
+            st.caption(t("Claude Code / Codex found on this computer: pick it below, no key needed."))
+            st.session_state.setdefault("llm-provider", installed[0])
         st.selectbox(t("Provider"), list(options), format_func=lambda p: options[p], key="llm-provider")
         provider = st.session_state.get("llm-provider", "anthropic")
         if provider in llm_provider.CLI_PROVIDERS:
@@ -403,7 +425,8 @@ def model_panel() -> None:
         else:
             st.text_input(t("API key"), type="password", key="llm-key",
                           help=t("Kept in this session's memory only: not saved to the database, the logs or any export."))
-        st.text_input(t("Model name"), key="llm-model", placeholder=llm_provider.DEFAULT_MODELS[provider] or t("(the tool's default)"))
+        st.text_input(t("Model name"), key="llm-model",
+                      placeholder=llm_provider.DEFAULT_MODELS[provider] or t("(the tool's default)"))
         if provider == "openai":
             st.text_input(t("Base URL"), key="llm-base", placeholder=llm_provider.DEFAULT_BASE_URL,
                           help=t("Leave empty for OpenAI. For a model on this computer use e.g. http://localhost:11434/v1 "
@@ -414,4 +437,3 @@ def model_panel() -> None:
         result = st.session_state.get("llm-msg")
         if result and not result[0]:
             st.error(t(result[1]))
->>>>>>> Stashed changes

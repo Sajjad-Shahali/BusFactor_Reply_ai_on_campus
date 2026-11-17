@@ -960,7 +960,9 @@ def start_simulator(member_id: str, rng: Optional[random.Random] = None) -> Inte
         decision = _card(did)
         seen = [q.prompt for q in mine if q.decision_id == did and q.question_type == QuestionType.transfer
                 and is_simulator_question(q)]
-        base = create_interview(decision, member_id, [])
+        # only the comparison text is needed here: a plain placeholder avoids a model call for a throw-away question
+        base = InterviewQuestion(id=f"Q-{did}-{member_id}-sim-base", decision_id=did, member_id=member_id,
+                                 prompt=decision.title, question_type=QuestionType.why, project_id=member.project_id)
         try:
             q = create_transfer_test(decision, base, seen)
         except ValueError:
@@ -1088,13 +1090,14 @@ def find_course_pointers(decision_id: str, limit: int = 3) -> list[dict]:
 
 def export_team_report_pdf(project_id: Optional[str] = None, now: Optional[datetime] = None) -> bytes:
     """A one-page PDF with the coverage chart and the per-decision table. Counts only, like the Markdown report."""
+    from xml.sax.saxutils import escape as esc_markup
+
     from reportlab.graphics.shapes import Drawing, Rect, String
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-    from xml.sax.saxutils import escape as esc_markup
 
     pid = _pid(project_id)
     p, report, snaps = _proj(pid), team_coverage(pid), coverage_snapshots(pid)

@@ -1,14 +1,7 @@
-"""LLM provider — the one function the whole team uses to call a model (Teammate 2).
+"""LLM provider: the one place the app calls a language model.
 
 complete_json(prompt, schema, fixture=None) -> dict
 
-<<<<<<< Updated upstream
-- Live mode (DEMO_MODE is not true AND LLM_API_KEY is set): calls Claude with a JSON
-  schema as structured output, validates the JSON, retries once on bad JSON.
-- Demo mode (DEMO_MODE=true, or no key): never touches the network. Returns the
-  caller's deterministic `fixture` with "is_synthetic": True, or raises LLMUnavailable
-  if the caller has no fixture. Fixture output is never presented as model inference.
-=======
 A model can be connected in two ways:
 
 * **For one browser session** (the app's "Connect a model" panel): the provider, key, model and base URL live in
@@ -29,16 +22,14 @@ Providers:
 
 Without a connected model the app stays offline: complete_json returns the caller's deterministic ``fixture`` marked
 ``"is_synthetic": True`` (never presented as model output), or raises LLMUnavailable when there is none.
->>>>>>> Stashed changes
 """
 from __future__ import annotations
 
 import copy
+import ipaddress
 import json
 import logging
 import os
-<<<<<<< Updated upstream
-=======
 import shutil
 import socket
 import subprocess
@@ -48,8 +39,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
->>>>>>> Stashed changes
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 try:  # .env support is optional
     from dotenv import load_dotenv
@@ -60,9 +51,6 @@ except ImportError:  # pragma: no cover
 
 log = logging.getLogger(__name__)
 
-<<<<<<< Updated upstream
-DEFAULT_MODEL = "claude-opus-5-5"
-=======
 PROVIDERS = {"anthropic": "Claude (Anthropic)", "openai": "OpenAI, Codex or a compatible / local model",
              "claude-cli": "Claude Code on this computer (uses your Claude login)",
              "codex-cli": "Codex CLI on this computer (uses your Codex login)"}
@@ -71,7 +59,6 @@ DEFAULT_MODELS = {"anthropic": "claude-opus-5-5", "openai": "gpt-5", "claude-cli
 CLI_TIMEOUT_S = 180
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = DEFAULT_MODELS["anthropic"]
->>>>>>> Stashed changes
 TIMEOUT_S = 60
 # Models that accept server-side refusal fallbacks with the "default" routing form.
 _FALLBACK_MODELS = {"claude-opus-5-5", "claude-opus-5", "claude-fable-5-1"}
@@ -82,8 +69,6 @@ class LLMUnavailable(RuntimeError):
     """No live model and no fixture for this call (or the model refused / failed)."""
 
 
-<<<<<<< Updated upstream
-=======
 @dataclass(frozen=True)
 class Config:
     """One model connection. The key is never shown: repr and str mask it."""
@@ -140,17 +125,15 @@ def active_config() -> Optional[Config]:
     return get_session_config() or env_config()
 
 
->>>>>>> Stashed changes
 def demo_mode() -> bool:
-    return os.getenv("DEMO_MODE", "false").strip().lower() in {"1", "true", "yes"}
+    """True while the app is offline: DEMO_MODE is set and no model was connected for this session."""
+    return get_session_config() is None and _env_flag("DEMO_MODE")
 
 
 def llm_available() -> bool:
-    return not demo_mode() and bool(os.getenv("LLM_API_KEY"))
+    return active_config() is not None
 
 
-<<<<<<< Updated upstream
-=======
 def local_cli_enabled() -> bool:
     """The command-line providers run a program on this computer, so they are off unless explicitly enabled."""
     return _env_flag("BUSFACTOR_ENABLE_LOCAL_CLI")
@@ -208,26 +191,22 @@ def validate_base_url(url: str) -> str:
 
 # ------------------------------------------------------------------ calling the model
 
->>>>>>> Stashed changes
 def complete_json(prompt: str, schema: dict, fixture: Optional[dict] = None) -> dict:
     """Return a dict matching `schema`, with an added boolean "is_synthetic"."""
-    if not llm_available():
+    cfg = active_config()
+    if cfg is None:
         if fixture is None:
-            raise LLMUnavailable("Demo mode (or no LLM_API_KEY) and no demo fixture for this call.")
+            raise LLMUnavailable("No model is connected and there is no demo fixture for this call.")
         return {**copy.deepcopy(fixture), "is_synthetic": True}
 
     last_error: Exception | None = None
     for _attempt in range(2):  # 1 retry on bad JSON
-<<<<<<< Updated upstream
-        text = _call_claude(prompt, schema)
-=======
         if cfg.provider == "anthropic":
             text = _call_claude(prompt, schema)
         elif cfg.provider == "openai":
             text = _call_openai(prompt, schema)
         else:
             text = _call_cli(prompt, schema)
->>>>>>> Stashed changes
         try:
             data = json.loads(text)
             if not isinstance(data, dict):
@@ -280,11 +259,18 @@ def _strict(schema: dict) -> dict:
     return walk(copy.deepcopy(schema))
 
 
-def _call_claude(prompt: str, schema: dict) -> str:
+def _need(cfg: Optional[Config]) -> Config:
+    if cfg is None:
+        raise LLMUnavailable("No model is connected.")
+    return cfg
+
+
+def _call_claude(prompt: str, schema: dict, config: Optional[Config] = None) -> str:
     import anthropic
 
-    model = os.getenv("LLM_MODEL") or DEFAULT_MODEL
-    client = anthropic.Anthropic(api_key=os.environ["LLM_API_KEY"], timeout=TIMEOUT_S, max_retries=2)
+    cfg = _need(config or active_config())
+    model = cfg.model or DEFAULT_MODELS["anthropic"]
+    client = anthropic.Anthropic(api_key=cfg.api_key, timeout=TIMEOUT_S, max_retries=2)
     kwargs: dict = dict(
         model=model,
         max_tokens=16000,
@@ -299,6 +285,8 @@ def _call_claude(prompt: str, schema: dict) -> str:
             )
         else:
             response = client.messages.create(**kwargs)
+    except anthropic.AuthenticationError as err:
+        raise LLMUnavailable("The provider rejected the key (401). Check it and the model name.") from err
     except anthropic.RateLimitError as err:
         raise LLMUnavailable("Model rate-limited; try again shortly.") from err
     except anthropic.APIStatusError as err:
@@ -311,8 +299,6 @@ def _call_claude(prompt: str, schema: dict) -> str:
     if response.stop_reason == "max_tokens":
         raise LLMUnavailable("Model output was cut off (max_tokens).")
     return next((b.text for b in response.content if b.type == "text"), "")
-<<<<<<< Updated upstream
-=======
 
 
 def _openai_post(cfg: Config, body: dict) -> dict:
@@ -480,4 +466,3 @@ def test_connection(config: Config) -> tuple[bool, str]:
 def _is_local(url: str) -> bool:
     host = urlparse(url or "").hostname or ""
     return host in ("localhost", "127.0.0.1", "::1")
->>>>>>> Stashed changes

@@ -533,8 +533,6 @@ IT.update({
         "progetti e la demo non sono toccati.",
 })
 
-<<<<<<< Updated upstream
-=======
 
 # ---- connect a model, question source, quiz
 IT.update({
@@ -590,7 +588,112 @@ IT.update({
     "(the tool's default)": "(il predefinito dello strumento)",
 })
 
->>>>>>> Stashed changes
+
+# ---- guided tour (the robot)
+IT.update({
+    "Start the tutorial": "Avvia il tutorial", "Stop the tutorial": "Ferma il tutorial",
+    "Take the 2-minute tutorial": "Fai il tutorial di 2 minuti",
+    "Next": "Avanti", "Back": "Indietro", "Skip tour": "Salta il tour", "Done": "Fatto",
+    "Step {n} of {m}": "Passo {n} di {m}", "Walking over…": "Sto arrivando…", "Tutorial": "Tutorial",
+    "Hi, I'm Bus!": "Ciao, sono Bus!",
+    "I'll walk you through BusFactor in about two minutes. It helps a group project check that everyone can explain the "
+    "key decisions, not only their own part. Press Next, or use the arrow keys.":
+        "Ti accompagno in BusFactor in circa due minuti. Aiuta un progetto di gruppo a verificare che tutti sappiano "
+        "spiegare le decisioni chiave, non solo la propria parte. Premi Avanti o usa le frecce.",
+    "1. Pick a project": "1. Scegli un progetto",
+    "This is the demo, with made-up data, so you can play safely. Your own project shows up here after you create it on "
+    "the Project Setup page.":
+        "Questa è la demo, con dati inventati, così puoi provare in sicurezza. Il tuo progetto compare qui dopo averlo "
+        "creato nella pagina Impostazione progetto.",
+    "2. Pick who you are": "2. Scegli chi sei",
+    "In the demo, choose any member (A to D) to see the app through their eyes. In a real project you unlock your own "
+    "account with your personal access code.":
+        "Nella demo scegli un membro qualsiasi (da A a D) per vedere l'app con i suoi occhi. In un progetto reale sblocchi "
+        "il tuo account con il codice di accesso personale.",
+    "3. The six pages": "3. Le sei pagine",
+    "Work from the top down: set up, private check, coverage, teaching, retest, evidence. You do not have to remember "
+    "the order, because every page tells you the next step.":
+        "Procedi dall'alto: impostazione, verifica privata, copertura, insegnamento, nuovo test, evidenze. Non devi "
+        "ricordare l'ordine: ogni pagina ti dice il prossimo passo.",
+    "4. Always start here": "4. Parti sempre da qui",
+    "\u201cYour next step\u201d is the one thing to do now. Press its button and it takes you to the right page.":
+        "\u00abIl tuo prossimo passo\u00bb è l'unica cosa da fare ora. Premi il suo pulsante e ti porta alla pagina giusta.",
+    "5. Four numbers": "5. Quattro numeri",
+    "Coverage is how many key decisions at least two people can explain. \u201cOnly 1 person can explain\u201d is the risk. "
+    "Missions and verified decisions show the progress.":
+        "La copertura è quante decisioni chiave almeno due persone sanno spiegare. \u00abSolo 1 persona sa spiegare\u00bb è il "
+        "rischio. Missioni e decisioni verificate mostrano i progressi.",
+    "6. Page 1: the decisions": "6. Pagina 1: le decisioni",
+    "The team's key decisions come from your report. Each one has a quote that the app checks on its page, and a member "
+    "confirms it before anybody is questioned.":
+        "Le decisioni chiave del team vengono dal vostro report. Ognuna ha una citazione che l'app controlla nella sua "
+        "pagina, e un membro la conferma prima che qualcuno venga interrogato.",
+    "7. Page 2: your private check": "7. Pagina 2: la tua verifica privata",
+    "Choose up to two decisions that you did NOT make and press this button. You get one question for each. Only you see "
+    "your answers.":
+        "Scegli fino a due decisioni che NON hai preso tu e premi questo pulsante. Ricevi una domanda per ciascuna. Solo tu "
+        "vedi le tue risposte.",
+    "Your privacy": "La tua privacy",
+    "Open this to see exactly who can see what. In short: your answers are private and the team only sees counts.":
+        "Aprilo per vedere esattamente chi può vedere cosa. In breve: le tue risposte sono private e il team vede solo "
+        "conteggi.",
+    "8. Page 3: the verdict": "8. Pagina 3: il verdetto",
+    "This sentence is the point of the app: how many decisions depend on one person. When it is red, that is a gap in "
+    "what the team knows.":
+        "Questa frase è il punto dell'app: quante decisioni dipendono da una sola persona. Quando è rossa, è una lacuna "
+        "nelle conoscenze del team.",
+    "The dots": "I puntini",
+    "Each dot is a person who can explain the decision. One filled dot means one person carries it.":
+        "Ogni puntino è una persona che sa spiegare la decisione. Un solo puntino pieno significa che la regge una persona.",
+    "9. Page 4: teach each other": "9. Pagina 4: insegnatevi a vicenda",
+    "For each decision only one person can explain, the app pairs a mentor with a learner. Both agree, talk it through, "
+    "tick the checklist, and the retest unlocks.":
+        "Per ogni decisione che sa spiegare una sola persona, l'app abbina un mentore a uno studente. Entrambi accettano, "
+        "ne parlano, spuntano la lista e si sblocca il nuovo test.",
+    "10. Page 5: prove it": "10. Pagina 5: dimostralo",
+    "After teaching, the learner answers a NEW question with no hints. Pass it and coverage goes up. Down here a mock "
+    "oral and a 5-question quiz let anyone practise; they never change coverage.":
+        "Dopo l'insegnamento, lo studente risponde a una NUOVA domanda senza aiuti. Se la supera, la copertura sale. Qui "
+        "sotto un'interrogazione di prova e un quiz di 5 domande permettono di allenarsi; non cambiano mai la copertura.",
+    "11. Page 6: evidence": "11. Pagina 6: evidenze",
+    "Where every decision comes from, a plain-language log of what happened, a review queue for answers the model could "
+    "not score, and the limits of this prototype.":
+        "Da dove viene ogni decisione, un registro in linguaggio semplice di cosa è successo, una coda di revisione per le "
+        "risposte che il modello non ha potuto valutare e i limiti di questo prototipo.",
+    "12. Connect a model (optional)": "12. Collega un modello (facoltativo)",
+    "Without a model you get demo questions. Connect Claude, Codex or another model here and the app writes real "
+    "questions and scores answers. Your key stays in this session only.":
+        "Senza modello hai domande demo. Collega qui Claude, Codex o un altro modello e l'app scrive domande vere e valuta "
+        "le risposte. La tua chiave resta solo in questa sessione.",
+    "That is the whole loop": "Ecco tutto il ciclo",
+    "Find a risk, teach, retest, and watch coverage go up. On any page, start with \u201cYour next step\u201d. You can call "
+    "me again from the sidebar.":
+        "Trova un rischio, insegna, rifai il test e guarda salire la copertura. In ogni pagina parti da \u00abIl tuo prossimo "
+        "passo\u00bb. Puoi richiamarmi dalla barra laterale.",
+})
+
+
+# ---- connect panel hints
+IT.update({
+    "Claude Code or Codex is installed on this computer. To use it without a key, start the app with "
+    "BUSFACTOR_ENABLE_LOCAL_CLI=true (your own computer only).":
+        "Claude Code o Codex è installato su questo computer. Per usarlo senza chiave, avvia l'app con "
+        "BUSFACTOR_ENABLE_LOCAL_CLI=true (solo sul tuo computer).",
+    "Claude Code / Codex found on this computer: pick it below, no key needed.":
+        "Claude Code / Codex trovato su questo computer: sceglilo qui sotto, non serve la chiave.",
+})
+
+
+# ---- stop button and tutorial hint
+IT.update({
+    "Model on: {m}": "Modello attivo: {m}",
+    "Stop the model": "Ferma il modello",
+    "Disconnects the model now. No more calls are sent; questions fall back to the fixed templates.":
+        "Scollega subito il modello. Non vengono inviate altre chiamate; le domande tornano ai modelli fissi.",
+    "A small robot walks you through the app in about two minutes.":
+        "Un piccolo robot ti accompagna nell'app in circa due minuti.",
+})
+
 # sentences built by coverage.py and missions.py: matched by shape, then translated with the same placeholders
 _DYNAMIC = [
     (r"^(\d+) members have each demonstrated it, so the team does not depend on one person\.$",
