@@ -46,7 +46,7 @@ def test_interface_switches_to_italian_and_back():
     at.query_params["lang"] = "it"
     at.run()
     assert not at.exception, at.exception
-    assert "DATI DEMO — sintetici" in " ".join(md.value for md in at.sidebar.markdown)
+    assert any("Fai il tutorial di 2 minuti" in b.label for b in at.sidebar.button)       # the sidebar speaks Italian
     goto(at, "3. Team Coverage")
     text = page_text(at)
     assert "Copertura del team" in text and "Solo 1 sa spiegarla" in text

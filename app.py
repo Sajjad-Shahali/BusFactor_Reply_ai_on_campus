@@ -30,6 +30,7 @@ orc.ensure_seeded()
 st.session_state["_ctx"] = Ctx()   # fresh per run and per browser session (see ui/state.py)
 # a model connected in this session (key in session memory only) is used for this run; None means the server default
 llm_provider.set_session_config(st.session_state.get("llm"))
+llm_provider.set_session_budget(st.session_state.setdefault("llm-budget", llm_provider.CallBudget()))
 
 # ------------------------------------------------------------------ sidebar
 with st.sidebar:   # the containers fix the display order; the code below fills them in the order logic needs
@@ -45,7 +46,7 @@ with box_you:
 with box_top:
     show(BRAND)
     st.caption(t("Your grade is shared. Your understanding shouldn't be isolated."))
-    tutorial.tour_button("sidebar")
+    tutorial.tour_button()
     model_status()
     all_projects = {p.id: p for p in orc.projects()}
     project_ids = list(all_projects)
@@ -57,10 +58,6 @@ with box_top:
         orc.open_project(chosen)
     load_project_state()
     members, names = ctx().members, ctx().names
-    badge = orc.demo_banner()
-    if badge:
-        show(f'<div class="bf-badge"><b>{esc(t(badge))}</b>{esc(t("Fictional project, members, answers and consent."))}'
-             '</div>')
 
 # Optional deep links for demos and screenshots, e.g. ?page=3&as=M04
 qp_page, qp_as = st.query_params.get("page", ""), st.query_params.get("as", "")

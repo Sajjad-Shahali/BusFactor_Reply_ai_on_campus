@@ -694,6 +694,19 @@ IT.update({
         "Un piccolo robot ti accompagna nell'app in circa due minuti.",
 })
 
+
+# ---- model call limit
+IT.update({
+    "{n} of {m} calls": "{n} di {m} chiamate",
+    "Call limit reached: questions use the fixed templates now.":
+        "Limite di chiamate raggiunto: ora le domande usano i modelli fissi.",
+    "Allow {m} more calls": "Consenti altre {m} chiamate",
+})
+
+
+# ---- project report upload heading
+IT.update({"Start a new project: upload your project report": "Avvia un nuovo progetto: carica la relazione del progetto"})
+
 # sentences built by coverage.py and missions.py: matched by shape, then translated with the same placeholders
 _DYNAMIC = [
     (r"^(\d+) members have each demonstrated it, so the team does not depend on one person\.$",

@@ -134,16 +134,11 @@ def stop() -> None:
     st.session_state["tour_on"] = False
 
 
-def tour_button(location: str = "sidebar") -> None:
-    """Start/stop button. The stop button must exist while the tour runs: the robot clicks it when it finishes."""
+def tour_button() -> None:
+    """The one start/stop button (sidebar). The stop button must exist while the tour runs: the robot clicks it when done."""
     active = bool(st.session_state.get("tour_on"))
-    if location == "page":   # a page only offers to START it: the one Stop button lives in the sidebar (a key must be unique)
-        if not active:
-            st.button(t("Take the 2-minute tutorial"), key="tour-start-page", on_click=start, type="primary",
-                      icon=":material/smart_toy:")
-        return
     if active:
         st.button(t("Stop the tutorial"), key="tour-stop", on_click=stop, icon=":material/close:", width="stretch")
     else:
-        st.button(t("Start the tutorial"), key="tour-start", on_click=start, icon=":material/smart_toy:",
+        st.button(t("Take the 2-minute tutorial"), key="tour-start", on_click=start, icon=":material/smart_toy:",
                   type="primary", width="stretch", help=t("A small robot walks you through the app in about two minutes."))

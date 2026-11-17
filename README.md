@@ -179,6 +179,7 @@ Settings live in `.env` (copy it from `.env.example`; never commit it).
 | `DEMO_MODE` | `true` | `true`: offline, no model calls, answers scored by a fixed keyword rubric. `false`: use the live model. |
 | `LLM_PROVIDER` | `anthropic` | `anthropic` (Claude), `openai` (OpenAI, Codex models, or any OpenAI-compatible / local endpoint), or `claude-cli` / `codex-cli` (the installed tools, needs `BUSFACTOR_ENABLE_LOCAL_CLI=true`). |
 | `BUSFACTOR_ENABLE_LOCAL_CLI` | `false` | Allow the command-line providers. They run a program as the user who started the server: your own computer only. |
+| `BUSFACTOR_MODEL_CALL_LIMIT` | `50` | Model calls one browser session may make. After that the app uses the fixed templates until the user allows more (the sidebar shows the count and a **Stop the model** button). `0` means no limit. |
 | `LLM_API_KEY` | empty | API key for a server-wide model, needed only when `DEMO_MODE=false`. A local model needs none. |
 | `LLM_BASE_URL` | empty | `openai` provider only: the endpoint, for example `http://localhost:11434/v1` for Ollama. |
 | `BUSFACTOR_ALLOW_PRIVATE_LLM_URLS` | `false` | Allow a model on a private network. Link-local and cloud-metadata addresses stay blocked. |
@@ -404,7 +405,7 @@ Numbers below are what the repository measures today. None of them is a validati
 
 | Check | Result |
 |---|---|
-| Automated tests | 413 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
+| Automated tests | 420 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
 | Lint and types | `ruff` and `mypy` run clean in CI on Python 3.11 and 3.12 |
 | Answer-request guard | 38/38 adversarial cases blocked (paraphrases, Italian/French/Spanish/German, spelling tricks, look-alike letters) |
 | Prompt-injection guard | 37/37 adversarial cases blocked (role changes, score demands, JSON, other languages, spacing tricks) |
@@ -460,7 +461,7 @@ python -m ruff check .        # lint
 python -m mypy                # types
 ```
 
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 413 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite with coverage on Python 3.11 and 3.12 for every push and pull request.
+The tests run offline: the model is replaced by a deterministic fake. At the last run, 420 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite on Python 3.11 and 3.12 for every push and pull request.
 
 ## Limitations
 

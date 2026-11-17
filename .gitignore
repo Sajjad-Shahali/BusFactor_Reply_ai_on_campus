@@ -1,5 +1,19 @@
 /temp
-/src/busfactor/__pycache__
-/ui/__pycache__
-/ui/pages/__pycache__
-/tests/__pycache__
+
+# secrets and local data: never commit these
+.env
+*.db
+*.db-journal
+*.sqlite3
+uploads/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

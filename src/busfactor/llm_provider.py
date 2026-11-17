@@ -37,7 +37,7 @@ import tempfile
 import threading
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -189,6 +189,49 @@ def validate_base_url(url: str) -> str:
     return str(url).strip().rstrip("/")
 
 
+# ------------------------------------------------------------------ how many calls one session may make
+
+DEFAULT_CALL_LIMIT = 50
+
+
+def call_limit() -> int:
+    """Model calls one browser session may make (BUSFACTOR_MODEL_CALL_LIMIT, default 50; 0 means no limit)."""
+    try:
+        return max(0, int(os.getenv("BUSFACTOR_MODEL_CALL_LIMIT", str(DEFAULT_CALL_LIMIT))))
+    except ValueError:
+        return DEFAULT_CALL_LIMIT
+
+
+@dataclass
+class CallBudget:
+    """A session's allowance of model calls. Each try counts, including a retry after bad JSON. When it is used up the
+    app answers from the fixed templates, so a model left connected cannot keep spending tokens."""
+
+    limit: int = field(default_factory=call_limit)
+    used: int = 0
+
+    @property
+    def exhausted(self) -> bool:
+        return self.limit > 0 and self.used >= self.limit
+
+    def spend(self) -> None:
+        self.used += 1
+
+    def reset(self) -> None:
+        self.used = 0
+
+
+_budget = threading.local()
+
+
+def set_session_budget(budget: Optional[CallBudget]) -> None:
+    _budget.value = budget
+
+
+def get_session_budget() -> Optional[CallBudget]:
+    return getattr(_budget, "value", None)
+
+
 # ------------------------------------------------------------------ calling the model
 
 def complete_json(prompt: str, schema: dict, fixture: Optional[dict] = None) -> dict:
@@ -199,8 +242,16 @@ def complete_json(prompt: str, schema: dict, fixture: Optional[dict] = None) -> 
             raise LLMUnavailable("No model is connected and there is no demo fixture for this call.")
         return {**copy.deepcopy(fixture), "is_synthetic": True}
 
+    budget = get_session_budget()
     last_error: Exception | None = None
     for _attempt in range(2):  # 1 retry on bad JSON
+        if budget is not None and budget.exhausted:   # allowance used up: fixed templates, no more spending
+            if fixture is None:
+                raise LLMUnavailable(f"The limit of {budget.limit} model calls for this session is reached. "
+                                     "Fixed questions are used until you allow more calls.")
+            return {**copy.deepcopy(fixture), "is_synthetic": True}
+        if budget is not None:
+            budget.spend()
         if cfg.provider == "anthropic":
             text = _call_claude(prompt, schema)
         elif cfg.provider == "openai":

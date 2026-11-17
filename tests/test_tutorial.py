@@ -112,7 +112,7 @@ def open_app() -> AppTest:
 def test_the_sidebar_starts_and_stops_the_tour_and_no_key_is_used_twice():
     at = open_app()
     assert not any("bf-tour-loader" in h.value for h in at.get("html"))               # nothing is injected while it is off
-    assert any(b.key == "tour-start" for b in at.sidebar.button) and any(b.key == "tour-start-page" for b in at.button)
+    assert any(b.key == "tour-start" for b in at.sidebar.button) and not any(b.key == "tour-start-page" for b in at.button)
     at.sidebar.button(key="tour-start").click()
     at.run()
     assert not at.exception, at.exception                                             # a duplicate button key used to crash the Overview

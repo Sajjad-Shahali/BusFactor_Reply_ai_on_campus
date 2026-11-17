@@ -41,7 +41,7 @@ def render() -> None:
     st.info(f"**{t('Next step')}:** {t(next_step)}")
 
     show_issued_codes()
-    with st.expander(t("Start a new project")):
+    with st.expander(t("Start a new project: upload your project report"), expanded=demo or not cx.cards):
         st.caption(t("A new project is added next to the existing ones; nothing is deleted. Members start with "
                      "every consent off. Only upload documents you are allowed to share."))
         with st.form("new-project"):

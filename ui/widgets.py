@@ -242,18 +242,31 @@ def current_page_index() -> int:
     return PAGES.index(page) if page in PAGES else 0
 
 
-def next_step_card() -> None:
-    """The one most useful thing this member can do now, with a button that goes there."""
+def next_step_card(extra=None) -> None:
+    """The one most useful thing this member can do now, with a button that goes there.
+
+    `extra` (optional) draws one more button next to it, so the two actions sit on one line."""
     cx = ctx()
     if cx.viewer is None:
+        if extra:
+            extra()
         return
     step = orc.next_step(cx.viewer)
     text = t(step.text).format(**step.params) if step.params else t(step.text)
     label = esc(t("Your next step"))
     show(f'<div class="bf-next" role="region" aria-label="{label}"><span class="nx" aria-hidden="true">\u2192</span>'
          f'<div><b>{label}</b><span>{esc(text)}</span></div></div>')
-    if current_page_index() != step.page:
+    show_next = current_page_index() != step.page
+    if show_next and extra:
+        first, second, _ = st.columns([3, 3, 6])
+        with first:
+            st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,))
+        with second:
+            extra()
+    elif show_next:
         st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,))
+    elif extra:
+        extra()
 
 
 def page_nav(index: int) -> None:
@@ -368,12 +381,20 @@ def _connect_model() -> None:
     if ok:
         state["llm"] = cfg
         state["llm-key"] = ""          # the typed key does not stay in the page's input
+        state["llm-budget"] = llm_provider.CallBudget()   # a new connection starts with a full allowance
 
 
 def _disconnect_model() -> None:
     st.session_state.pop("llm", None)
     st.session_state["llm-key"] = ""
     st.session_state.pop("llm-msg", None)
+    st.session_state["llm-budget"] = llm_provider.CallBudget()
+
+
+def _more_calls() -> None:
+    budget = st.session_state.get("llm-budget")
+    if budget is not None:
+        budget.reset()
 
 
 def model_status() -> None:
@@ -385,7 +406,16 @@ def model_status() -> None:
     cfg = llm_provider.get_session_config()
     if not cfg:
         return
-    st.markdown(f'<div class="bf-muted">● {esc(t("Model on: {m}").format(m=cfg.label))}</div>', unsafe_allow_html=True)
+    budget = llm_provider.get_session_budget()
+    calls = ""
+    if budget is not None:
+        total = str(budget.limit) if budget.limit else "∞"
+        calls = " · " + t("{n} of {m} calls").format(n=budget.used, m=total)
+    st.markdown(f'<div class="bf-muted">● {esc(t("Model on: {m}").format(m=cfg.label))}{esc(calls)}</div>',
+                unsafe_allow_html=True)
+    if budget is not None and budget.exhausted:
+        st.warning(t("Call limit reached: questions use the fixed templates now."))
+        st.button(t("Allow {m} more calls").format(m=budget.limit), key="llm-more", on_click=_more_calls)
     st.button(t("Stop the model"), key="llm-stop", on_click=_disconnect_model, type="primary", width="stretch",
               icon=":material/stop_circle:", help=t("Disconnects the model now. No more calls are sent; questions fall "
                                                    "back to the fixed templates."))

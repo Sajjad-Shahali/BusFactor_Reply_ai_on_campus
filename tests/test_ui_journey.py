@@ -48,7 +48,7 @@ def submit(at: AppTest, area, answer: str) -> AppTest:
 def test_full_demo_journey_through_the_ui():
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
     at.run()
-    assert "DEMO DATA — synthetic" in " ".join(md.value for md in at.sidebar.markdown)
+    assert "Synthetic demo" in " ".join(md.value for md in at.markdown)     # the demo is still labelled synthetic (hero kicker)
 
     go(at, "M01", "3. Team Coverage")
     assert "1/5 (20%)" in text(at)
@@ -152,8 +152,8 @@ def test_a_new_project_through_the_ui_offline():
     assert "0 of 1 confirmed decisions have been assessed" in text(at)
     assert "unknown, not failed" in text(at)
 
-    # switching back to the demo shows the synthetic badge and its untouched 1/5
+    # switching back to the demo shows its untouched 1/5
     at.sidebar.selectbox(key="project").set_value("P01")
     at.run()
     go(at, "M01", "3. Team Coverage")
-    assert "1/5 (20%)" in text(at) and any("DEMO DATA" in md.value for md in at.sidebar.markdown)
+    assert "1/5 (20%)" in text(at) and not any("DEMO DATA" in md.value for md in at.sidebar.markdown)   # no sidebar box any more
