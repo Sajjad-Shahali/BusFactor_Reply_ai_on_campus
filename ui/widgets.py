@@ -252,7 +252,19 @@ def next_step_card() -> None:
     label = esc(t("Your next step"))
     show(f'<div class="bf-next" role="region" aria-label="{label}"><span class="nx" aria-hidden="true">\u2192</span>'
          f'<div><b>{label}</b><span>{esc(text)}</span></div></div>')
+<<<<<<< Updated upstream
     if current_page_index() != step.page:
+=======
+    show_next = current_page_index() != step.page
+    if show_next and extra:
+        left, right = st.columns(2)           # two equal halves, as wide as the card above
+        with left:
+            st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,),
+                      width="stretch")
+        with right:
+            extra()
+    elif show_next:
+>>>>>>> Stashed changes
         st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,))
 
 

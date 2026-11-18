@@ -51,9 +51,17 @@ def render() -> None:
          f'<p>{esc(t(HERO_TEXT))}</p>'
          f'<div class="bf-kpis">{tiles}</div></div>')
 
+<<<<<<< Updated upstream
     next_step_card()
     if orc.is_demo_project():
         st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,))
+=======
+    def guided_tour_button() -> None:
+        st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,),
+                  width="stretch")
+
+    next_step_card(extra=guided_tour_button if orc.is_demo_project() else None)
+>>>>>>> Stashed changes
     rows = "".join(
         f'<li><span class="t">{esc(dlabel(c.decision_id))} \u00b7 {esc(cx.cards[c.decision_id].title)}</span>'
         f'{pill(*COVERAGE_PILL[c.status])}<span class="c">{esc(t("{n} can explain it").format(n=len(c.demonstrated_by)))}</span></li>'
