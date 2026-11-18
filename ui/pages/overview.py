@@ -52,7 +52,8 @@ def render() -> None:
          f'<div class="bf-kpis">{tiles}</div></div>')
 
     def guided_tour_button() -> None:
-        st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,))
+        st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,),
+                  width="stretch")
 
     next_step_card(extra=guided_tour_button if orc.is_demo_project() else None)
     rows = "".join(

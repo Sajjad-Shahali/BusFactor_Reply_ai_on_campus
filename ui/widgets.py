@@ -258,10 +258,11 @@ def next_step_card(extra=None) -> None:
          f'<div><b>{label}</b><span>{esc(text)}</span></div></div>')
     show_next = current_page_index() != step.page
     if show_next and extra:
-        first, second, _ = st.columns([3, 3, 6])
-        with first:
-            st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,))
-        with second:
+        left, right = st.columns(2)           # two equal halves, as wide as the card above
+        with left:
+            st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,),
+                      width="stretch")
+        with right:
             extra()
     elif show_next:
         st.button(f"{t(step.button)} \u2192", key="next-step", type="primary", on_click=go_to, args=(step.page,))
