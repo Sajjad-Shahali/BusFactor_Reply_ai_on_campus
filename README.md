@@ -22,7 +22,9 @@ An AI agent that finds the project decisions only one teammate can explain, orga
 
 </div>
 
-![BusFactor demo: coverage goes from 1/5 to 2/5 after a peer-teaching mission and an independent retest](docs/demo.gif)
+![BusFactor on a real course report: five decisions read from a two-column PDF, private checks, a peer-teaching mission and a retest move coverage from 0/5 to 1/5](docs/demo.gif)
+
+<sub>The GIF uses a real machine-learning course report, read by a connected model (Claude Code on this computer). The team members are placeholders (Member A to D) and the answers were written for the recording.</sub>
 
 ---
 
@@ -139,7 +141,7 @@ In the demo, coverage starts at **1/5**. Member B teaches Member D why the team 
 
 ## Screenshots
 
-The loop above, as the app shows it. All screenshots use the synthetic demo data in offline demo mode.
+The loop above, as the app shows it. The screenshots below use the synthetic demo data in offline demo mode; the GIF above uses a real report.
 
 | | |
 |---|---|

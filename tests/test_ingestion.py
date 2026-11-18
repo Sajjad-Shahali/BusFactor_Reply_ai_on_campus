@@ -112,3 +112,43 @@ def test_confirm_card_refuses_unsupported_card_and_source_edits():
     [good] = extract_decisions([str(REPORT)], llm=fake_llm([GOOD]))
     with pytest.raises(ValueError):
         confirm_card(good, {"source_refs": []})
+
+
+def _two_column_pdf(path):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    c = canvas.Canvas(str(path), pagesize=A4)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(60, 790, "A Title That Runs Across Both Columns Of The Page")
+    c.setFont("Helvetica", 10)
+    left = ["We chose PostgreSQL because seats must", "never be sold twice, and a transaction", "guarantees that for us."]
+    right = ["The index on event and start time cut", "the timetable query from two seconds", "to a few milliseconds."]
+    for i, (a, b) in enumerate(zip(left, right, strict=True)):
+        c.drawString(60, 740 - 14 * i, a)
+        c.drawString(320, 740 - 14 * i, b)
+    for i in range(3, 8):   # more two-column lines, so the page is clearly a two-column one
+        c.drawString(60, 740 - 14 * i, f"left filler line number {i}")
+        c.drawString(320, 740 - 14 * i, f"right filler line number {i}")
+    c.save()
+
+
+def test_a_two_column_pdf_is_read_one_column_at_a_time(tmp_path):
+    from busfactor import ingestion
+
+    pdf = tmp_path / "paper.pdf"
+    _two_column_pdf(pdf)
+    text = ingestion.load_pages(pdf)[0][1]
+    assert "A Title That Runs Across Both Columns Of The Page" in text
+    # a sentence that wraps over several lines of ONE column stays together
+    assert "never be sold twice, and a transaction guarantees" in " ".join(text.split())
+    assert "cut the timetable query from two seconds to a few" in " ".join(text.split())
+
+
+def test_a_quote_survives_a_hyphenated_line_break():
+    from busfactor.knowledge import quote_on_page
+
+    pages = [(1, "Bridging the sim-to-real gap in reinforcement learn-\ning requires policies that stay reliable.")]
+    assert quote_on_page("reinforcement learning requires policies that stay reliable", pages, 1)
+    assert not quote_on_page("reinforcement learning requires policies that never fail", pages, 1)
+    assert not quote_on_page("learning", pages, 1)          # too short to count as a match after squashing
