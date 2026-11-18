@@ -1,30 +1,6 @@
-<<<<<<< Updated upstream
-/temp
-
-# secrets and local data: never commit these
-.env
-*.db
-*.db-journal
-*.sqlite3
-uploads/
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-.coverage
-htmlcov/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-=======
 /src/busfactor/__pycache__
-/tests/__pycache__
-ui/pages/__pycache__/evidence.cpython-312.pyc
-/ui/pages/__pycache__
-ui/__pycache__/state.cpython-312.pyc
-/ui/__pycache__
 /temp
+/tests/__pycache__
+/ui/__pycache__
+/ui/pages/__pycache__
 /scripts/__pycache__
->>>>>>> Stashed changes
