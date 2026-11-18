@@ -59,10 +59,35 @@ It is a **learning and assessment** tool. It does not assign tasks, schedule wor
 
 ## How it works
 
-```
-Project report ──► Decision cards ──► Private checks ──► Coverage map ──► Teaching mission ──► Independent retest ──► Follow-up
- (PDF / MD / TXT)   quote + page,      Why? / What if?    ≥ 2 explainers    mentor → learner     new question,          a few days later,
-                    human confirms     scored 0 / 1 / 2   per decision      (both consent)       no hints               another new question
+```mermaid
+flowchart TD
+    R["Project report<br/>PDF / MD / TXT"]
+
+    subgraph S1["Step 1: Capture"]
+        DC["Decision cards<br/>quote + page,<br/>human confirms"]
+    end
+
+    subgraph S2["Steps 2-3: Check and detect silos"]
+        PC["Private checks<br/>Why? / What if?<br/>scored 0 / 1 / 2"]
+        CM["Coverage map<br/>≥ 2 explainers<br/>per decision"]
+        PC --> CM
+    end
+
+    Q{"How many members<br/>can explain it?"}
+
+    subgraph S3["Steps 4-6: Teach and verify"]
+        TM["Teaching mission<br/>mentor → learner<br/>(both consent)"]
+        RT["Independent retest<br/>new question,<br/>no hints"]
+        UP["Coverage goes up<br/>(if the learner scores 2)"]
+        FU["Follow-up<br/>a few days later,<br/>another new question"]
+        TM --> RT --> UP --> FU
+    end
+
+    R --> DC --> PC
+    CM --> Q
+    Q -- "2 or more" --> OK["Covered"]
+    Q -- "nobody" --> TA["Course material<br/>or TA"]
+    Q -- "only 1" --> TM
 ```
 
 1. **Capture.** Read the project file and pull out 5 key decisions. Each one has a quote from the file, and the code checks that the quote is really on the page it cites. A person then confirms the cards.
