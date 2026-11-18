@@ -122,8 +122,8 @@ The loop above, as the app shows it. All screenshots use the synthetic demo data
 | **5. Defense Retest**: a new question, no hints<br>![Defense Retest](docs/screenshots/06_defense_retest.png) | **6. Evidence & Limits**: sources, action log and limits<br>![Evidence and Limits](docs/screenshots/07_evidence_limits.png) |
 | **After the retest**: coverage 2/5, one single point of failure fewer<br>![Coverage after the retest](docs/screenshots/08_coverage_after_retest.png) | **Italian interface**: same page, same numbers<br>![Italian interface](docs/screenshots/09_italian_coverage.png) |
 | **Human review queue**: answers without names, scored by a reviewer<br>![Review queue](docs/screenshots/10_review_queue.png) | **Defense simulator**: a mock oral, practice only<br>![Defense simulator](docs/screenshots/12_defense_simulator.png) |
-| **Empty states** say what to do next<br>![Empty state](docs/screenshots/13_empty_state.png) | **On a phone**: the verdict first, stats stacked<br><img src="docs/screenshots/11_mobile_coverage.png" alt="Team Coverage on a phone" width="260"> |
-| **Teaching session**: checklist and conversation starters<br>![Teaching session](docs/screenshots/14_teaching_session.png) | **The retest follows the session**: until it is held, the page says so<br>![Retest gate](docs/screenshots/15_retest_gate.png) |
+| **Empty states** say what to do next<br>![Empty state](docs/screenshots/13_empty_state.png) | **Teaching session**: checklist and conversation starters<br>![Teaching session](docs/screenshots/14_teaching_session.png) |
+| **The retest follows the session**: until it is held, the page says so<br>![Retest gate](docs/screenshots/15_retest_gate.png) | **On a phone**: the verdict first, stats stacked<br><img src="docs/screenshots/11_mobile_coverage.png" alt="Team Coverage on a phone" width="260"> |
 
 There is also a static landing page, `web/index.html`, with a 3D knowledge map (`web/knowledge_map.html`). Open it in a browser; "Open the demo" links to the Streamlit app.
 

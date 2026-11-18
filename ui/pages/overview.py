@@ -52,10 +52,13 @@ def render() -> None:
          f'<div class="bf-kpis">{tiles}</div></div>')
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     next_step_card()
     if orc.is_demo_project():
         st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,))
 =======
+=======
+>>>>>>> Stashed changes
     def guided_tour_button() -> None:
         st.button(f"{t('Start the guided tour')} \u2192", key="tour", type="primary", on_click=go_to, args=(3,),
                   width="stretch")
