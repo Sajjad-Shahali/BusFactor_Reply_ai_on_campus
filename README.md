@@ -432,7 +432,7 @@ Numbers below are what the repository measures today. None of them is a validati
 
 | Check | Result |
 |---|---|
-| Automated tests | 420 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
+| Automated tests | 423 passed, 1 skipped; 92% line coverage of `src/busfactor` (UI pages are covered through Streamlit's AppTest, not counted here) |
 | Lint and types | `ruff` and `mypy` run clean in CI on Python 3.11 and 3.12 |
 | Answer-request guard | 38/38 adversarial cases blocked (paraphrases, Italian/French/Spanish/German, spelling tricks, look-alike letters) |
 | Prompt-injection guard | 37/37 adversarial cases blocked (role changes, score demands, JSON, other languages, spacing tricks) |
@@ -488,7 +488,7 @@ python -m ruff check .        # lint
 python -m mypy                # types
 ```
 
-The tests run offline: the model is replaced by a deterministic fake. At the last run, 420 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite on Python 3.11 and 3.12 for every push and pull request.
+The tests run offline: the model is replaced by a deterministic fake. At the last run, 423 passed and 1 was skipped. `tests/test_live_llm.py` is skipped unless you set `RUN_LIVE_LLM=1` and `LLM_API_KEY`; it sends only the synthetic test report. GitHub Actions runs ruff, mypy and the suite on Python 3.11 and 3.12 for every push and pull request.
 
 ## Limitations
 

@@ -124,3 +124,11 @@ def test_review_queue_tab_lets_a_reviewer_score_an_unscored_answer():
     assert not at.exception, at.exception
     assert orc.review_queue("P01") == []
     assert {c.decision_id: c for c in orc.team_coverage("P01").per_decision}["D02"].status == "covered"
+
+
+def test_a_scenario_that_starts_with_its_own_label_is_not_labelled_twice():
+    from ui.pages.retest import scenario_line
+
+    assert scenario_line("New requirement: the policy keeps learning online.") == "New situation: the policy keeps learning online."
+    assert scenario_line("Scenario - physics is fixed.") == "New situation: physics is fixed."
+    assert scenario_line("The robot is heavier.") == "New situation: The robot is heavier."

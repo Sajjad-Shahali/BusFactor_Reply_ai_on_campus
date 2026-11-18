@@ -1,6 +1,8 @@
 """Page 5: independent retest, follow-up and the defense simulator."""
 from __future__ import annotations
 
+import re
+
 import streamlit as st
 
 from busfactor import orchestrator as orc
@@ -16,6 +18,12 @@ from ui.widgets import (
 
 
 QUIZ_LENGTH = 5
+_LABEL = re.compile(r"^\s*(new\s+)?(situation|scenario|requirement|constraint|condition)s?\s*[:\-–—]\s*", re.I)
+
+
+def scenario_line(scenario: str) -> str:
+    """'New situation: <scenario>'. The model sometimes starts the scenario with its own label: drop that one."""
+    return f"{t('New situation')}: {_LABEL.sub('', scenario, count=1).strip()}"
 
 
 def quiz_summary(quiz: dict, history: list) -> None:
@@ -101,7 +109,7 @@ def render() -> None:
             show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-lock">{esc(attempt)}</span></div>')
             if q.scenario:
-                show(f'<div class="bf-muted">{esc(t("New situation"))}: {esc(q.scenario)}</div>')
+                show(f'<div class="bf-muted">{esc(scenario_line(q.scenario))}</div>')
             show(f'<div class="bf-question">{esc(q.prompt)}</div>')
             show(source_chip(q))
             answer = draft_box(f"retest-{m.id}", t("Your answer"), 130)
@@ -159,7 +167,7 @@ def render() -> None:
             show(f'<div><span class="bf-lock">{LOCK_SVG}{esc(t("Solo question · no hints"))}</span>'
                  f'<span class="bf-muted">{esc(dlabel(sim_open.decision_id))} · {esc(cx.cards[sim_open.decision_id].title)}</span></div>')
             if sim_open.scenario:
-                show(f'<div class="bf-muted">{esc(t("New situation"))}: {esc(sim_open.scenario)}</div>')
+                show(f'<div class="bf-muted">{esc(scenario_line(sim_open.scenario))}</div>')
             show(f'<div class="bf-question">{esc(sim_open.prompt)}</div>')
             show(source_chip(sim_open))
             sim_answer = draft_box("sim-answer", t("Your answer"), 120)
