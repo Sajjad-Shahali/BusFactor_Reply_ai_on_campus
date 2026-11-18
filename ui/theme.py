@@ -5,7 +5,7 @@ HERO_TEXT = ("BusFactor finds the project decisions only one teammate can explai
              "teammates, and checks with a new question that the knowledge really moved.")
 PAGES = ["Overview", "1. Project Setup", "2. Private Check", "3. Team Coverage", "4. Teach Each Other",
          "5. Defense Retest", "6. Evidence & Limits"]
-PAGE_HINTS = ["The demo at a glance", "Key decisions and sources", "Your own questions", "Who can explain what",
+PAGE_HINTS = ["Where your team stands", "Key decisions and sources", "Your own questions", "Who can explain what",
               "Peer-teaching missions", "New question, no hints", "Sources, log, limits"]
 
 COVERAGE_PILL = {

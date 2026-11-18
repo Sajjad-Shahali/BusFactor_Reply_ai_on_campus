@@ -94,12 +94,22 @@ def _normalise(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
+def _squash(text: str) -> str:
+    return re.sub(r"[\s\-‐‑–­]+", "", text).casefold()
+
+
 def quote_on_page(quote: str, pages: list[tuple[int, str]], page: Optional[int]) -> bool:
     """True only if a non-empty quote appears on exactly the cited page."""
     if not quote or not quote.strip() or page is None:
         return False
     page_text = dict(pages).get(page)
-    return page_text is not None and _normalise(quote) in _normalise(page_text)
+    if page_text is None:
+        return False
+    if _normalise(quote) in _normalise(page_text):
+        return True
+    # PDF line breaks split words ("learn-" / "ing"): compare again without spaces and hyphens
+    squashed = _squash(quote)
+    return len(squashed) >= 25 and squashed in _squash(page_text)
 
 
 def _default_llm() -> Optional[LLMFn]:

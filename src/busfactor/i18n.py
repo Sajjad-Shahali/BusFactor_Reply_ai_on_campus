@@ -54,7 +54,7 @@ IT = {
     "4. Teach Each Other": "4. Insegnatevi a vicenda",
     "5. Defense Retest": "5. Nuovo test",
     "6. Evidence & Limits": "6. Evidenze e limiti",
-    "The demo at a glance": "La demo in sintesi",
+    "Where your team stands": "A che punto è il team",
     "Key decisions and sources": "Decisioni chiave e fonti",
     "Your own questions": "Le tue domande",
     "Who can explain what": "Chi sa spiegare cosa",
@@ -498,7 +498,7 @@ IT.update({
         "Aggiungi i membri del team qui sotto. Ogni membro accetta poi la valutazione nella pagina Verifica privata.",
     "Add the project's key decisions: by hand (each quote is checked) or with the live model.":
         "Aggiungi le decisioni chiave del progetto: a mano (ogni citazione viene controllata) o con il modello reale.",
-    "Decisions are confirmed. Members can now take private checks and owners their owner checks.":
+    "Decisions are confirmed. Members can now take private checks, and owners can verify their own decisions.":
         "Le decisioni sono confermate. I membri possono ora fare le verifiche private e i responsabili la loro verifica.",
     "A new project is added next to the existing ones; nothing is deleted. Members start with every consent off. Only "
     "upload documents you are allowed to share.":

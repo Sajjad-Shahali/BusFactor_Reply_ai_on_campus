@@ -37,7 +37,7 @@ def render() -> None:
         next_step = (f"Review {len(by_status[ReviewStatus.proposed])} proposed decision(s): check the quote, "
                      "choose the owner, confirm. Nothing is assessed before it is confirmed.")
     else:
-        next_step = "Decisions are confirmed. Members can now take private checks and owners their owner checks."
+        next_step = "Decisions are confirmed. Members can now take private checks, and owners can verify their own decisions."
     st.info(f"**{t('Next step')}:** {t(next_step)}")
 
     show_issued_codes()

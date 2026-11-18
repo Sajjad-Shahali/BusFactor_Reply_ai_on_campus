@@ -43,10 +43,71 @@ def _load_pdf(path: Path) -> list[tuple[int, str]]:
     pages: list[tuple[int, str]] = []
     with pdfplumber.open(path) as pdf:
         for number, page in enumerate(pdf.pages, start=1):
-            text = (page.extract_text() or "").strip()
+            text = _page_text(page).strip()
             if text:  # scanned/blank pages have no text layer -> skipped, number kept
                 pages.append((number, text))
     return pages
+
+
+_LINE_TOLERANCE = 3.0     # words whose tops differ by less than this are on one line (points)
+_GUTTER = 6.0             # a gap at least this wide in the middle of a line is the space between two columns
+
+
+def _page_text(page) -> str:
+    """Text of one PDF page in reading order.
+
+    Two-column papers (IEEE, ACM) are read left column first, then right column; a plain `extract_text`
+    runs across both columns line by line, which scrambles sentences so that no quote can be found.
+    Full-width lines (title, wide figures) stay where they are.
+    """
+    words = page.extract_words(x_tolerance=1.5, y_tolerance=_LINE_TOLERANCE, keep_blank_chars=False)
+    if not words:
+        return ""
+    middle = float(page.width) / 2
+    rows: list[list[dict]] = []
+    for word in sorted(words, key=lambda w: (round(float(w["top"])), float(w["x0"]))):
+        if rows and abs(float(word["top"]) - float(rows[-1][0]["top"])) <= _LINE_TOLERANCE:
+            rows[-1].append(word)
+        else:
+            rows.append([word])
+    # without a clear gutter in at least a few lines, this is a one-column page: keep the normal order
+    split_rows = sum(1 for row in rows if _split_row(row, middle) is not None)
+    if split_rows < 5:
+        return "\n".join(" ".join(w["text"] for w in sorted(row, key=lambda w: float(w["x0"]))) for row in rows)
+    out: list[str] = []
+    left: list[str] = []
+    right: list[str] = []
+
+    def flush() -> None:
+        out.extend(left)
+        out.extend(right)
+        left.clear()
+        right.clear()
+
+    for row in rows:
+        parts = _split_row(row, middle)
+        if parts is None:            # a line that crosses the middle: it is full width
+            flush()
+            out.append(" ".join(w["text"] for w in sorted(row, key=lambda w: float(w["x0"]))))
+            continue
+        if parts[0]:
+            left.append(" ".join(w["text"] for w in parts[0]))
+        if parts[1]:
+            right.append(" ".join(w["text"] for w in parts[1]))
+    flush()
+    return "\n".join(out)
+
+
+def _split_row(row: list[dict], middle: float):
+    """(left words, right words) when the line has a gutter around the middle of the page, else None."""
+    ordered = sorted(row, key=lambda w: float(w["x0"]))
+    left = [w for w in ordered if (float(w["x0"]) + float(w["x1"])) / 2 < middle]
+    right = [w for w in ordered if (float(w["x0"]) + float(w["x1"])) / 2 >= middle]
+    if any(float(w["x0"]) < middle - 1 and float(w["x1"]) > middle + 1 for w in ordered):
+        return None                  # a word crosses the middle
+    if left and right and float(right[0]["x0"]) - float(left[-1]["x1"]) < _GUTTER:
+        return None                  # the two sides touch: one wide line
+    return left, right
 
 
 def _load_text(text: str) -> list[tuple[int, str]]:
